@@ -55,6 +55,16 @@ type ClassroomFullStatus struct {
 	Status   []RoomStatus `json:"status"`    // 各节次状态列表
 }
 
+// StatsResponse 查询统计响应
+type StatsResponse struct {
+	TodayCount int    `json:"today_count"` // 今日查询次数
+	WeekCount  int    `json:"week_count"`  // 本周查询次数
+	MonthCount int    `json:"month_count"` // 本月查询次数
+	TodayTop   string `json:"today_top"`   // 今日最热教室
+	WeekTop    string `json:"week_top"`    // 本周最热教室
+	MonthTop   string `json:"month_top"`   // 本月最热教室
+}
+
 // FullDayStatusResponse 全天状态查询响应
 type FullDayStatusResponse struct {
 	Date       string                `json:"date"`        // 查询日期 (YYYY-MM-DD)
