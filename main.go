@@ -65,8 +65,24 @@ func main() {
 	if err := service.InitCalendarService(client); err != nil {
 		logger.Warn("初始化日历服务失败：%v。日历功能可能不准确。", err)
 	}
+
+	// 启动每日 00:01 自动刷新周次
+	if cal := service.GetCalendarService(); cal != nil {
+		cal.StartDailyRefresh()
+	}
+
 	classroomService := service.NewClassroomService(client)
-	apiHandler := v1.NewHandler(classroomService)
+
+	// 初始化统计服务
+	statsService, err := service.NewStatsService("data/stats.db")
+	if err != nil {
+		logger.Warn("初始化统计服务失败：%v。统计功能将不可用。", err)
+	}
+	if statsService != nil {
+		defer statsService.Close()
+	}
+
+	apiHandler := v1.NewHandler(classroomService, statsService)
 
 	// 3. 设置 Gin
 	r := gin.Default()
@@ -88,6 +104,7 @@ func main() {
 		api.GET("/status", apiHandler.GetStatus)
 		api.POST("/query", apiHandler.QueryClassrooms)
 		api.POST("/query-full-day", apiHandler.QueryFullDayStatus)
+		api.GET("/stats", apiHandler.GetStats)
 	}
 
 	// 静态资源路由

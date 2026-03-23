@@ -10,10 +10,11 @@ import (
 
 type Handler struct {
 	classroomService *service.ClassroomService
+	statsService     *service.StatsService
 }
 
-func NewHandler(cs *service.ClassroomService) *Handler {
-	return &Handler{classroomService: cs}
+func NewHandler(cs *service.ClassroomService, ss *service.StatsService) *Handler {
+	return &Handler{classroomService: cs, statsService: ss}
 }
 
 // GetStatus 返回系统状态，包括是否在教学周历内
@@ -61,6 +62,11 @@ func (h *Handler) QueryClassrooms(c *gin.Context) {
 		return
 	}
 
+	// 异步记录查询统计
+	if h.statsService != nil {
+		go h.statsService.RecordQuery(req.BuildingName, resp.Classrooms, "empty")
+	}
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -83,5 +89,30 @@ func (h *Handler) QueryFullDayStatus(c *gin.Context) {
 		return
 	}
 
+	// 异步记录查询统计（提取教室名称列表）
+	if h.statsService != nil {
+		classrooms := make([]string, len(resp.Classrooms))
+		for i, cr := range resp.Classrooms {
+			classrooms[i] = cr.RoomName
+		}
+		go h.statsService.RecordQuery(req.BuildingName, classrooms, "full_day")
+	}
+
 	c.JSON(http.StatusOK, resp)
+}
+
+// GetStats 获取查询统计数据
+func (h *Handler) GetStats(c *gin.Context) {
+	if h.statsService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "统计服务未初始化"})
+		return
+	}
+
+	stats, err := h.statsService.GetStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取统计数据失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
