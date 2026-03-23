@@ -1,6 +1,7 @@
 <script setup>
 import QRCodeCard from '@/components/QRCodeCard.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import StatsCard from '@/components/StatsCard.vue'
 </script>
 
 <template>
@@ -9,6 +10,8 @@ import AppFooter from '@/components/AppFooter.vue'
       <div class="text-center py-8">
         <h2 class="text-2xl font-bold text-primary">QFNU 教室查询系统</h2>
       </div>
+
+      <StatsCard />
 
       <div class="space-y-4">
         <RouterLink

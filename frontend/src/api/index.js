@@ -25,6 +25,11 @@ export async function queryFullDayStatus(params) {
   return data
 }
 
+export async function getStats() {
+  const { data } = await api.get('/api/v1/stats')
+  return data
+}
+
 export function getErrorMessage(error, fallback = '请求失败，请稍后重试') {
   return error?.response?.data?.error || fallback
 }
