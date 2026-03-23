@@ -25,10 +25,7 @@ type CalendarService struct {
 	mu             sync.RWMutex
 }
 
-var (
-	calendarInstance *CalendarService
-	calendarOnce     sync.Once
-)
+var calendarInstance *CalendarService
 
 // GetCalendarService 单例获取
 func GetCalendarService() *CalendarService {
@@ -37,14 +34,32 @@ func GetCalendarService() *CalendarService {
 
 // InitCalendarService 初始化日历服务
 func InitCalendarService(client *cas.Client) error {
-	var err error
-	calendarOnce.Do(func() {
-		calendarInstance = &CalendarService{
-			client: client,
+	calendarInstance = &CalendarService{
+		client: client,
+	}
+	return calendarInstance.Refresh()
+}
+
+// StartDailyRefresh 启动每日 00:01 自动刷新周次信息的后台任务
+func (s *CalendarService) StartDailyRefresh() {
+	go func() {
+		for {
+			now := time.Now()
+			// 计算下一个 00:01 的时间
+			next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 1, 0, 0, now.Location())
+			waitDuration := next.Sub(now)
+			logger.Info("周次自动刷新已调度，将在 %s 执行（等待 %v）", next.Format("2006-01-02 15:04:05"), waitDuration)
+
+			time.Sleep(waitDuration)
+
+			logger.Info("正在执行每日周次刷新...")
+			if err := s.Refresh(); err != nil {
+				logger.Warn("每日周次刷新失败: %v", err)
+			} else {
+				logger.Info("每日周次刷新成功，当前周次: %d", s.GetBaseWeek())
+			}
 		}
-		err = calendarInstance.Refresh()
-	})
-	return err
+	}()
 }
 
 // Refresh 从教务系统刷新当前周次信息
