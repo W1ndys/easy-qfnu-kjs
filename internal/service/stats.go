@@ -31,65 +31,107 @@ func NewStatsService(dbPath string) (*StatsService, error) {
 		return nil, fmt.Errorf("打开数据库失败: %w", err)
 	}
 
-	// 创建表
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS query_logs (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			classroom TEXT NOT NULL,
-			building TEXT NOT NULL,
-			query_type TEXT NOT NULL,
-			queried_at DATETIME DEFAULT (datetime('now', 'localtime'))
-		);
-		CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at);
-		CREATE INDEX IF NOT EXISTS idx_classroom ON query_logs(classroom);
-	`)
-	if err != nil {
+	// 执行迁移
+	if err := migrateSchema(db); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("创建表失败: %w", err)
+		return nil, fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
 	logger.Info("统计服务已初始化，数据库路径: %s", dbPath)
 	return &StatsService{db: db}, nil
 }
 
-// RecordQuery 记录一次查询（异步调用，记录被查询的教室）
-func (s *StatsService) RecordQuery(building string, classrooms []string, queryType string) {
-	if len(classrooms) == 0 {
-		// 即使没有查到教室，也记录一次查询（用 building 作为标记）
-		_, err := s.db.Exec(
-			"INSERT INTO query_logs (classroom, building, query_type) VALUES (?, ?, ?)",
-			building, building, queryType,
-		)
-		if err != nil {
-			logger.Warn("记录查询统计失败: %v", err)
-		}
-		return
-	}
-
-	tx, err := s.db.Begin()
+// migrateSchema 检测并迁移表结构
+func migrateSchema(db *sql.DB) error {
+	// 检测表是否存在
+	var tableExists int
+	err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='query_logs'").Scan(&tableExists)
 	if err != nil {
-		logger.Warn("开始事务失败: %v", err)
-		return
+		return fmt.Errorf("检测表存在失败: %w", err)
 	}
 
-	stmt, err := tx.Prepare("INSERT INTO query_logs (classroom, building, query_type) VALUES (?, ?, ?)")
+	if tableExists == 0 {
+		// 表不存在，直接创建新表
+		return createNewTable(db)
+	}
+
+	// 检测表结构是否为旧版本（包含 classroom 列）
+	var columnCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM PRAGMA table_info(query_logs) WHERE name='classroom'").Scan(&columnCount)
 	if err != nil {
-		tx.Rollback()
-		logger.Warn("准备语句失败: %v", err)
+		return fmt.Errorf("检测表结构失败: %w", err)
+	}
+
+	if columnCount > 0 {
+		// 旧表结构，需要迁移
+		logger.Warn("检测到旧版 query_logs 表结构，开始迁移...")
+		return migrateFromOldSchema(db)
+	}
+
+	// 新表结构，检查索引
+	return createIndexesIfNotExist(db)
+}
+
+// createNewTable 创建新的表结构
+func createNewTable(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS query_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			keyword TEXT NOT NULL,
+			queried_at DATETIME DEFAULT (datetime('now', 'localtime'))
+		);
+		CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at);
+		CREATE INDEX IF NOT EXISTS idx_keyword ON query_logs(keyword);
+	`)
+	if err != nil {
+		return fmt.Errorf("创建表失败: %w", err)
+	}
+	return nil
+}
+
+// migrateFromOldSchema 从旧结构迁移到新结构（直接删除旧数据重建）
+func migrateFromOldSchema(db *sql.DB) error {
+	// 删除旧表
+	_, err := db.Exec("DROP TABLE query_logs")
+	if err != nil {
+		return fmt.Errorf("删除旧表失败: %w", err)
+	}
+
+	// 创建新表
+	err = createNewTable(db)
+	if err != nil {
+		return err
+	}
+
+	logger.Warn("旧版 query_logs 表已删除，已创建新表结构")
+	return nil
+}
+
+// createIndexesIfNotExist 创建索引（如果不存在）
+func createIndexesIfNotExist(db *sql.DB) error {
+	_, err := db.Exec("CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at)")
+	if err != nil {
+		return fmt.Errorf("创建 queried_at 索引失败: %w", err)
+	}
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS idx_keyword ON query_logs(keyword)")
+	if err != nil {
+		return fmt.Errorf("创建 keyword 索引失败: %w", err)
+	}
+	return nil
+}
+
+// RecordQuery 记录一次搜索关键词查询（异步调用）
+func (s *StatsService) RecordQuery(keyword string) {
+	if keyword == "" {
 		return
 	}
-	defer stmt.Close()
 
-	for _, classroom := range classrooms {
-		if _, err := stmt.Exec(classroom, building, queryType); err != nil {
-			tx.Rollback()
-			logger.Warn("插入记录失败: %v", err)
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		logger.Warn("提交事务失败: %v", err)
+	_, err := s.db.Exec(
+		"INSERT INTO query_logs (keyword) VALUES (?)",
+		keyword,
+	)
+	if err != nil {
+		logger.Warn("记录搜索关键词失败: %v", err)
 	}
 }
 
@@ -112,31 +154,49 @@ func (s *StatsService) GetStats() (*model.StatsResponse, error) {
 	resp := &model.StatsResponse{}
 
 	// 今日查询次数
-	s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", todayStart).Scan(&resp.TodayCount)
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", todayStart).Scan(&resp.TodayCount); err != nil {
+		logger.Error("查询今日统计失败: %v", err)
+		return nil, fmt.Errorf("查询今日统计失败: %w", err)
+	}
 
 	// 本周查询次数
-	s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", weekStart).Scan(&resp.WeekCount)
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", weekStart).Scan(&resp.WeekCount); err != nil {
+		logger.Error("查询本周统计失败: %v", err)
+		return nil, fmt.Errorf("查询本周统计失败: %w", err)
+	}
 
 	// 本月查询次数
-	s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", monthStart).Scan(&resp.MonthCount)
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", monthStart).Scan(&resp.MonthCount); err != nil {
+		logger.Error("查询本月统计失败: %v", err)
+		return nil, fmt.Errorf("查询本月统计失败: %w", err)
+	}
 
-	// 今日最热教室
-	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+	// 今日最热搜索关键词
+	if err := s.db.QueryRow(
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		todayStart,
-	).Scan(&resp.TodayTop)
+	).Scan(&resp.TodayTop); err != nil && err != sql.ErrNoRows {
+		logger.Error("查询今日最热关键词失败: %v", err)
+		return nil, fmt.Errorf("查询今日最热关键词失败: %w", err)
+	}
 
-	// 本周最热教室
-	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+	// 本周最热搜索关键词
+	if err := s.db.QueryRow(
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		weekStart,
-	).Scan(&resp.WeekTop)
+	).Scan(&resp.WeekTop); err != nil && err != sql.ErrNoRows {
+		logger.Error("查询本周最热关键词失败: %v", err)
+		return nil, fmt.Errorf("查询本周最热关键词失败: %w", err)
+	}
 
-	// 本月最热教室
-	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+	// 本月最热搜索关键词
+	if err := s.db.QueryRow(
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		monthStart,
-	).Scan(&resp.MonthTop)
+	).Scan(&resp.MonthTop); err != nil && err != sql.ErrNoRows {
+		logger.Error("查询本月最热关键词失败: %v", err)
+		return nil, fmt.Errorf("查询本月最热关键词失败: %w", err)
+	}
 
 	return resp, nil
 }

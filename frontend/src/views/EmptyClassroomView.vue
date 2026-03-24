@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { getErrorMessage, queryClassrooms } from '@/api'
 import { useSystemStatus } from '@/composables/useSystemStatus'
+import { useSearchHistory } from '@/composables/useSearchHistory'
 import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import DateSelector from '@/components/DateSelector.vue'
@@ -11,12 +12,15 @@ import QRCodeCard from '@/components/QRCodeCard.vue'
 import StatusWarning from '@/components/StatusWarning.vue'
 
 const { statusLoading, inTeachingCalendar, hasPermission, currentWeek, currentTerm } = useSystemStatus()
+const { history, addToHistory, clearHistory } = useSearchHistory()
 
 const loading = ref(false)
 const hasSearched = ref(false)
 const results = ref([])
 const resultInfo = ref(null)
 const displayLimit = ref(100)
+const showHistory = ref(false)
+const inputFocused = ref(false)
 
 const form = reactive({
   building: '',
@@ -29,6 +33,29 @@ const nodeOptions = Array.from({ length: 11 }, (_, index) => String(index + 1).p
 
 const displayedResults = computed(() => results.value.slice(0, displayLimit.value))
 
+const showHistoryList = computed(() => inputFocused.value && showHistory.value && history.value.length > 0)
+
+function onInputFocus() {
+  inputFocused.value = true
+  showHistory.value = true
+}
+
+function onInputBlur() {
+  inputFocused.value = false
+  setTimeout(() => {
+    showHistory.value = false
+  }, 200)
+}
+
+function onInputChange() {
+  showHistory.value = false
+}
+
+function selectHistoryItem(keyword) {
+  form.building = keyword
+  showHistory.value = false
+}
+
 async function search() {
   if (!form.building.trim()) {
     alert('请输入教学楼')
@@ -40,6 +67,7 @@ async function search() {
   hasSearched.value = false
   results.value = []
   resultInfo.value = null
+  showHistory.value = false
 
   try {
     const data = await queryClassrooms({
@@ -56,6 +84,7 @@ async function search() {
       day: data.day_of_week,
     }
     hasSearched.value = true
+    addToHistory(form.building)
   } catch (error) {
     console.error(error)
     alert(getErrorMessage(error, '查询出错，请重试'))
@@ -119,7 +148,33 @@ async function search() {
               type="text"
               class="w-full bg-[#E5E5EA] rounded-xl py-3 pl-10 pr-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               placeholder="例如：老文史楼"
+              @focus="onInputFocus"
+              @blur="onInputBlur"
+              @input="onInputChange"
             />
+            <div
+              v-if="showHistoryList"
+              class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+            >
+              <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                <span class="text-xs text-gray-400">搜索历史</span>
+                <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="clearHistory">清除</button>
+              </div>
+              <div class="max-h-48 overflow-y-auto">
+                <button
+                  v-for="(item, index) in history"
+                  :key="index"
+                  type="button"
+                  class="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center"
+                  @mousedown.prevent="selectHistoryItem(item)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {{ item }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

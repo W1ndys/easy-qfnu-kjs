@@ -62,9 +62,9 @@ func (h *Handler) QueryClassrooms(c *gin.Context) {
 		return
 	}
 
-	// 异步记录查询统计
+	// 异步记录搜索关键词统计
 	if h.statsService != nil {
-		go h.statsService.RecordQuery(req.BuildingName, resp.Classrooms, "empty")
+		go h.statsService.RecordQuery(req.BuildingName)
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -89,13 +89,9 @@ func (h *Handler) QueryFullDayStatus(c *gin.Context) {
 		return
 	}
 
-	// 异步记录查询统计（提取教室名称列表）
+	// 异步记录搜索关键词统计
 	if h.statsService != nil {
-		classrooms := make([]string, len(resp.Classrooms))
-		for i, cr := range resp.Classrooms {
-			classrooms[i] = cr.RoomName
-		}
-		go h.statsService.RecordQuery(req.BuildingName, classrooms, "full_day")
+		go h.statsService.RecordQuery(req.BuildingName)
 	}
 
 	c.JSON(http.StatusOK, resp)
