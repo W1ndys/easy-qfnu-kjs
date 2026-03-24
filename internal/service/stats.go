@@ -35,13 +35,11 @@ func NewStatsService(dbPath string) (*StatsService, error) {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS query_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			classroom TEXT NOT NULL,
-			building TEXT NOT NULL,
-			query_type TEXT NOT NULL,
+			keyword TEXT NOT NULL,
 			queried_at DATETIME DEFAULT (datetime('now', 'localtime'))
 		);
 		CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at);
-		CREATE INDEX IF NOT EXISTS idx_classroom ON query_logs(classroom);
+		CREATE INDEX IF NOT EXISTS idx_keyword ON query_logs(keyword);
 	`)
 	if err != nil {
 		db.Close()
@@ -52,44 +50,18 @@ func NewStatsService(dbPath string) (*StatsService, error) {
 	return &StatsService{db: db}, nil
 }
 
-// RecordQuery 记录一次查询（异步调用，记录被查询的教室）
-func (s *StatsService) RecordQuery(building string, classrooms []string, queryType string) {
-	if len(classrooms) == 0 {
-		// 即使没有查到教室，也记录一次查询（用 building 作为标记）
-		_, err := s.db.Exec(
-			"INSERT INTO query_logs (classroom, building, query_type) VALUES (?, ?, ?)",
-			building, building, queryType,
-		)
-		if err != nil {
-			logger.Warn("记录查询统计失败: %v", err)
-		}
+// RecordQuery 记录一次搜索关键词查询（异步调用）
+func (s *StatsService) RecordQuery(keyword string) {
+	if keyword == "" {
 		return
 	}
 
-	tx, err := s.db.Begin()
+	_, err := s.db.Exec(
+		"INSERT INTO query_logs (keyword) VALUES (?)",
+		keyword,
+	)
 	if err != nil {
-		logger.Warn("开始事务失败: %v", err)
-		return
-	}
-
-	stmt, err := tx.Prepare("INSERT INTO query_logs (classroom, building, query_type) VALUES (?, ?, ?)")
-	if err != nil {
-		tx.Rollback()
-		logger.Warn("准备语句失败: %v", err)
-		return
-	}
-	defer stmt.Close()
-
-	for _, classroom := range classrooms {
-		if _, err := stmt.Exec(classroom, building, queryType); err != nil {
-			tx.Rollback()
-			logger.Warn("插入记录失败: %v", err)
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		logger.Warn("提交事务失败: %v", err)
+		logger.Warn("记录搜索关键词失败: %v", err)
 	}
 }
 
@@ -120,21 +92,21 @@ func (s *StatsService) GetStats() (*model.StatsResponse, error) {
 	// 本月查询次数
 	s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", monthStart).Scan(&resp.MonthCount)
 
-	// 今日最热教室
+	// 今日最热搜索关键词
 	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		todayStart,
 	).Scan(&resp.TodayTop)
 
-	// 本周最热教室
+	// 本周最热搜索关键词
 	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		weekStart,
 	).Scan(&resp.WeekTop)
 
-	// 本月最热教室
+	// 本月最热搜索关键词
 	s.db.QueryRow(
-		"SELECT classroom FROM query_logs WHERE queried_at >= ? GROUP BY classroom ORDER BY COUNT(*) DESC LIMIT 1",
+		"SELECT keyword FROM query_logs WHERE queried_at >= ? GROUP BY keyword ORDER BY COUNT(*) DESC LIMIT 1",
 		monthStart,
 	).Scan(&resp.MonthTop)
 
