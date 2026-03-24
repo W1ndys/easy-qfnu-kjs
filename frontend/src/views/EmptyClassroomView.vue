@@ -280,22 +280,22 @@ async function search() {
 
       <!-- Results grid -->
       <div v-if="results.length > 0" class="space-y-4">
-        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <div class="grid grid-cols-3 gap-2 sm:gap-3">
           <div
             v-for="(room, index) in displayedResults"
             :key="`${room}-${index}`"
-            class="rounded-[20px] p-4 flex items-center justify-center text-center transition-all duration-300 hover:-translate-y-1 hover:scale-105"
+            class="rounded-2xl py-2.5 px-2 flex items-center justify-center text-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-105"
             style="
               background: rgba(255, 255, 255, 0.65);
               backdrop-filter: blur(12px);
               box-shadow:
-                10px 10px 20px rgba(136, 79, 34, 0.06),
-                -6px -6px 12px rgba(255, 255, 255, 0.9),
-                inset 4px 4px 8px rgba(255, 255, 255, 0.7),
-                inset -4px -4px 8px rgba(136, 79, 34, 0.02);
+                6px 6px 14px rgba(136, 79, 34, 0.05),
+                -4px -4px 10px rgba(255, 255, 255, 0.9),
+                inset 3px 3px 6px rgba(255, 255, 255, 0.7),
+                inset -3px -3px 6px rgba(136, 79, 34, 0.02);
             "
           >
-            <span class="text-primary font-bold text-lg" style="font-family: 'Nunito', sans-serif;">{{ room }}</span>
+            <span class="text-primary font-bold text-sm sm:text-base" style="font-family: 'Nunito', sans-serif;">{{ room }}</span>
           </div>
         </div>
 
