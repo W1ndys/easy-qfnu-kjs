@@ -1,4 +1,4 @@
-# easy-qfnu-empty-classrooms
+# easy-qfnu-kjs
 
 曲阜师范大学 (QFNU) 统一身份认证 (CAS) 登录的 Go 语言实现。
 
