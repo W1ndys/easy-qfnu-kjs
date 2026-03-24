@@ -43,15 +43,29 @@ function handleCustomOffsetInput() {
 
 <template>
   <div>
-    <label class="block text-sm font-medium text-gray-500 mb-1.5 ml-1">日期</label>
+    <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">日期</label>
 
-    <div class="bg-[#E5E5EA] p-1 rounded-xl flex mb-2">
+    <!-- Clay segmented control -->
+    <div
+      class="p-1.5 rounded-[20px] flex mb-3"
+      style="
+        background: #F0EAE3;
+        box-shadow:
+          inset 6px 6px 12px rgba(136, 79, 34, 0.06),
+          inset -6px -6px 12px rgba(255, 255, 255, 0.9);
+      "
+    >
       <button
         v-for="(label, idx) in quickDateLabels"
         :key="idx"
         type="button"
-        class="flex-1 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-200"
-        :class="dateOffset === idx && !useCustomDate ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+        class="flex-1 py-2 text-[13px] font-bold rounded-[16px] transition-all duration-300"
+        :class="dateOffset === idx && !useCustomDate
+          ? 'text-clay-foreground'
+          : 'text-clay-muted hover:text-clay-foreground'"
+        :style="dateOffset === idx && !useCustomDate
+          ? 'background: white; box-shadow: 8px 8px 16px rgba(136, 79, 34, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.9), inset 2px 2px 4px rgba(255, 255, 255, 0.6), inset -2px -2px 4px rgba(0, 0, 0, 0.02);'
+          : ''"
         @click="setQuickDate(idx)"
       >
         {{ label }}
@@ -59,30 +73,36 @@ function handleCustomOffsetInput() {
 
       <button
         type="button"
-        class="flex-1 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-200"
-        :class="useCustomDate ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+        class="flex-1 py-2 text-[13px] font-bold rounded-[16px] transition-all duration-300"
+        :class="useCustomDate
+          ? 'text-clay-foreground'
+          : 'text-clay-muted hover:text-clay-foreground'"
+        :style="useCustomDate
+          ? 'background: white; box-shadow: 8px 8px 16px rgba(136, 79, 34, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.9), inset 2px 2px 4px rgba(255, 255, 255, 0.6), inset -2px -2px 4px rgba(0, 0, 0, 0.02);'
+          : ''"
         @click="toggleCustomDate"
       >
         自定义
       </button>
     </div>
 
+    <!-- Custom date input -->
     <div v-if="useCustomDate" class="space-y-2">
-      <div class="flex items-center space-x-2">
-        <div class="flex-1 relative">
+      <div class="flex items-center space-x-3">
+        <div class="flex-1">
           <input
             v-model.number="customOffset"
             type="number"
             min="0"
             max="180"
-            class="w-full bg-[#E5E5EA] rounded-xl py-3 px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            class="w-full clay-input py-3 px-5 text-[15px] text-clay-foreground"
             placeholder="输入天数"
             @input="handleCustomOffsetInput"
           />
         </div>
-        <span class="text-gray-500 text-sm whitespace-nowrap">天后</span>
+        <span class="text-clay-muted text-sm font-medium whitespace-nowrap">天后</span>
       </div>
-      <p class="text-xs text-gray-400 ml-1">{{ customDatePreview }}</p>
+      <p class="text-xs text-clay-muted ml-1 font-medium">{{ customDatePreview }}</p>
     </div>
   </div>
 </template>

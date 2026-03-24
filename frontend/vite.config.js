@@ -12,6 +12,7 @@ export default defineConfig({
   base: '/',
   server: {
     port: 5173,
+    allowedHosts: ['.monkeycode-ai.online'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8080',
