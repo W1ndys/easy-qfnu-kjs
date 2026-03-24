@@ -17,30 +17,46 @@ const props = defineProps({
   },
 })
 
-const classes = computed(() => {
+const styles = computed(() => {
   if (props.type === 'error') {
     return {
-      wrapper: 'bg-red-50 border-red-200',
-      icon: 'text-red-500',
-      title: 'text-red-800',
-      message: 'text-red-600',
+      bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.12) 100%)',
+      shadow: '12px 12px 24px rgba(239, 68, 68, 0.08), -8px -8px 16px rgba(255, 255, 255, 0.9), inset 4px 4px 8px rgba(255, 255, 255, 0.5), inset -4px -4px 8px rgba(239, 68, 68, 0.04)',
+      iconBg: 'linear-gradient(135deg, #FCA5A5 0%, #EF4444 100%)',
+      iconShadow: '6px 6px 12px rgba(239, 68, 68, 0.2), -3px -3px 6px rgba(255, 255, 255, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.05)',
+      titleClass: 'text-red-800',
+      messageClass: 'text-red-600',
     }
   }
 
   return {
-    wrapper: 'bg-amber-50 border-amber-200',
-    icon: 'text-amber-500',
-    title: 'text-amber-800',
-    message: 'text-amber-600',
+    bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.12) 100%)',
+    shadow: '12px 12px 24px rgba(245, 158, 11, 0.08), -8px -8px 16px rgba(255, 255, 255, 0.9), inset 4px 4px 8px rgba(255, 255, 255, 0.5), inset -4px -4px 8px rgba(245, 158, 11, 0.04)',
+    iconBg: 'linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)',
+    iconShadow: '6px 6px 12px rgba(245, 158, 11, 0.2), -3px -3px 6px rgba(255, 255, 255, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.05)',
+    titleClass: 'text-amber-800',
+    messageClass: 'text-amber-700',
   }
 })
 </script>
 
 <template>
-  <div :class="['border rounded-2xl p-4 shadow-sm', classes.wrapper]">
-    <div class="flex items-center space-x-3">
-      <div class="flex-shrink-0">
-        <svg class="w-6 h-6" :class="classes.icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div
+    class="rounded-[24px] p-5"
+    :style="{
+      background: styles.bg,
+      boxShadow: styles.shadow,
+    }"
+  >
+    <div class="flex items-center space-x-4">
+      <div
+        class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+        :style="{
+          background: styles.iconBg,
+          boxShadow: styles.iconShadow,
+        }"
+      >
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -50,8 +66,12 @@ const classes = computed(() => {
         </svg>
       </div>
       <div>
-        <h3 :class="['font-semibold', classes.title]">{{ props.title }}</h3>
-        <p :class="['text-sm mt-1', classes.message]">{{ props.message }}</p>
+        <h3 :class="['font-bold', styles.titleClass]" style="font-family: 'Nunito', sans-serif;">
+          {{ props.title }}
+        </h3>
+        <p :class="['text-sm mt-1 font-medium leading-relaxed', styles.messageClass]">
+          {{ props.message }}
+        </p>
       </div>
     </div>
   </div>
