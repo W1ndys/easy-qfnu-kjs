@@ -95,10 +95,22 @@ async function search() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[var(--color-bg-page)] text-[#1C1C1E] font-sans antialiased pb-10">
+  <div class="min-h-screen bg-clay-canvas text-clay-foreground antialiased pb-10 relative overflow-hidden">
+    <!-- Floating Clay Blobs -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+      <div
+        class="absolute h-[50vh] w-[50vh] rounded-full blur-3xl animate-clay-float"
+        style="background: rgba(136, 79, 34, 0.06); top: -5%; right: -15%;"
+      ></div>
+      <div
+        class="absolute h-[40vh] w-[40vh] rounded-full blur-3xl animate-clay-float-delayed animation-delay-2000"
+        style="background: rgba(16, 185, 129, 0.05); bottom: 10%; left: -10%;"
+      ></div>
+    </div>
+
     <AppHeader title="空教室查询" showBack />
 
-    <main class="px-4 py-4 space-y-4 max-w-xl mx-auto">
+    <main class="px-4 py-4 space-y-5 max-w-xl mx-auto relative z-10">
       <StatusWarning
         v-if="!hasPermission && !statusLoading"
         type="error"
@@ -115,128 +127,190 @@ async function search() {
 
       <LoadingSpinner v-if="statusLoading" text="正在检查系统状态..." />
 
-      <div v-else class="bg-white rounded-2xl p-4 shadow-sm space-y-4">
-        <div v-if="inTeachingCalendar" class="bg-green-50 border border-green-200 rounded-xl p-3 text-sm">
-          <div class="flex items-center space-x-2 text-green-700">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>当前：<strong>{{ currentTerm }}</strong> 第<strong>{{ currentWeek }}</strong>周</span>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-500 mb-1.5 ml-1">教学楼</label>
-          <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </span>
-            <input
-              v-model="form.building"
-              type="text"
-              class="w-full bg-[#E5E5EA] rounded-xl py-3 pl-10 pr-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              placeholder="例如：老文史楼"
-              @focus="onInputFocus"
-              @blur="onInputBlur"
-              @input="onInputChange"
-            />
-            <div
-              v-if="showHistoryList"
-              class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
-            >
-              <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                <span class="text-xs text-gray-400">搜索历史</span>
-                <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="clearHistory">清除</button>
+      <div v-else class="clay-card p-5 sm:p-7 space-y-5">
+        <div class="relative z-10 space-y-5">
+          <!-- Term info badge -->
+          <div
+            v-if="inTeachingCalendar"
+            class="rounded-[20px] p-3.5"
+            style="
+              background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0.12) 100%);
+              box-shadow:
+                8px 8px 16px rgba(16, 185, 129, 0.06),
+                -6px -6px 12px rgba(255, 255, 255, 0.9),
+                inset 3px 3px 6px rgba(255, 255, 255, 0.5),
+                inset -3px -3px 6px rgba(16, 185, 129, 0.03);
+            "
+          >
+            <div class="flex items-center space-x-2.5 text-emerald-700 text-sm font-medium">
+              <div
+                class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style="
+                  background: linear-gradient(135deg, #6EE7B7 0%, #10B981 100%);
+                  box-shadow: 3px 3px 6px rgba(16, 185, 129, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.3);
+                "
+              >
+                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-              <div class="max-h-48 overflow-y-auto">
-                <button
-                  v-for="(item, index) in history"
-                  :key="index"
-                  type="button"
-                  class="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center"
-                  @mousedown.prevent="selectHistoryItem(item)"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {{ item }}
-                </button>
+              <span>当前：<strong>{{ currentTerm }}</strong> 第<strong>{{ currentWeek }}</strong>周</span>
+            </div>
+          </div>
+
+          <!-- Building input -->
+          <div>
+            <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">教学楼</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted/60">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              </span>
+              <input
+                v-model="form.building"
+                type="text"
+                class="w-full clay-input py-3.5 pl-11 pr-5 text-[15px]"
+                placeholder="例如：老文史楼"
+                @focus="onInputFocus"
+                @blur="onInputBlur"
+                @input="onInputChange"
+              />
+              <!-- Search history dropdown -->
+              <div
+                v-if="showHistoryList"
+                class="absolute z-20 w-full mt-2 rounded-[20px] overflow-hidden"
+                style="
+                  background: rgba(255, 255, 255, 0.95);
+                  backdrop-filter: blur(24px);
+                  box-shadow:
+                    16px 16px 32px rgba(136, 79, 34, 0.1),
+                    -10px -10px 24px rgba(255, 255, 255, 0.9),
+                    inset 4px 4px 8px rgba(255, 255, 255, 0.6),
+                    inset -4px -4px 8px rgba(136, 79, 34, 0.02);
+                "
+              >
+                <div class="flex items-center justify-between px-4 py-2.5 border-b border-primary-100/30">
+                  <span class="text-xs text-clay-muted font-medium">搜索历史</span>
+                  <button type="button" class="text-xs text-clay-muted hover:text-primary font-medium transition-colors" @click="clearHistory">清除</button>
+                </div>
+                <div class="max-h-48 overflow-y-auto">
+                  <button
+                    v-for="(item, index) in history"
+                    :key="index"
+                    type="button"
+                    class="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 flex items-center transition-colors font-medium"
+                    @mousedown.prevent="selectHistoryItem(item)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-clay-muted/60 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ item }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <DateSelector v-model="form.offset" />
+          <!-- Date selector -->
+          <DateSelector v-model="form.offset" />
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-500 mb-1.5 ml-1">起始节次</label>
-            <select
-              v-model="form.start"
-              class="w-full bg-[#E5E5EA] rounded-xl py-3 px-4 text-[15px] appearance-none focus:outline-none"
-            >
-              <option v-for="value in nodeOptions" :key="`start-${value}`" :value="value">{{ value }}</option>
-            </select>
+          <!-- Node selectors -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">起始节次</label>
+              <select
+                v-model="form.start"
+                class="w-full clay-input py-3.5 px-5 text-[15px] appearance-none"
+              >
+                <option v-for="value in nodeOptions" :key="`start-${value}`" :value="value">{{ value }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">终止节次</label>
+              <select
+                v-model="form.end"
+                class="w-full clay-input py-3.5 px-5 text-[15px] appearance-none"
+              >
+                <option v-for="value in nodeOptions" :key="`end-${value}`" :value="value">{{ value }}</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-500 mb-1.5 ml-1">终止节次</label>
-            <select
-              v-model="form.end"
-              class="w-full bg-[#E5E5EA] rounded-xl py-3 px-4 text-[15px] appearance-none focus:outline-none"
-            >
-              <option v-for="value in nodeOptions" :key="`end-${value}`" :value="value">{{ value }}</option>
-            </select>
-          </div>
+          <!-- Search button -->
+          <button
+            type="button"
+            :disabled="loading"
+            class="w-full btn-clay-primary h-14 text-base"
+            @click="search"
+          >
+            <span v-if="!loading" style="font-family: 'Nunito', sans-serif;">查询空闲教室</span>
+            <span v-else class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              查询中...
+            </span>
+          </button>
         </div>
-
-        <button
-          type="button"
-          :disabled="loading"
-          class="w-full bg-primary text-white font-semibold py-3.5 rounded-xl btn-active transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-primary/20"
-          @click="search"
-        >
-          <span v-if="!loading">查询空闲教室</span>
-          <span v-else class="flex items-center">
-            <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            查询中...
-          </span>
-        </button>
       </div>
 
-      <div v-if="resultInfo" class="px-2 flex items-center justify-between text-xs text-gray-500">
+      <!-- Result info bar -->
+      <div v-if="resultInfo" class="px-3 flex items-center justify-between text-xs text-clay-muted font-medium">
         <span>{{ resultInfo.date }} (第{{ resultInfo.week }}周 星期{{ resultInfo.day }})</span>
-        <span>共 {{ results.length }} 间</span>
+        <span
+          class="px-3 py-1 rounded-full font-bold"
+          style="
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow:
+              4px 4px 8px rgba(136, 79, 34, 0.04),
+              -3px -3px 6px rgba(255, 255, 255, 0.8);
+          "
+        >
+          共 {{ results.length }} 间
+        </span>
       </div>
 
-      <div v-if="results.length > 0" class="space-y-3">
-        <div class="grid grid-cols-2 gap-3">
+      <!-- Results grid -->
+      <div v-if="results.length > 0" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
           <div
             v-for="(room, index) in displayedResults"
             :key="`${room}-${index}`"
-            class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-center"
+            class="rounded-[20px] p-4 flex items-center justify-center text-center transition-all duration-300 hover:-translate-y-1 hover:scale-105"
+            style="
+              background: rgba(255, 255, 255, 0.65);
+              backdrop-filter: blur(12px);
+              box-shadow:
+                10px 10px 20px rgba(136, 79, 34, 0.06),
+                -6px -6px 12px rgba(255, 255, 255, 0.9),
+                inset 4px 4px 8px rgba(255, 255, 255, 0.7),
+                inset -4px -4px 8px rgba(136, 79, 34, 0.02);
+            "
           >
-            <span class="text-primary font-semibold text-lg">{{ room }}</span>
+            <span class="text-primary font-bold text-lg" style="font-family: 'Nunito', sans-serif;">{{ room }}</span>
           </div>
         </div>
 
         <div v-if="results.length > displayLimit" class="mt-4 text-center">
-          <button type="button" class="text-primary text-sm font-medium hover:underline py-2" @click="displayLimit += 100">
+          <button
+            type="button"
+            class="text-primary text-sm font-bold hover:underline py-2.5 px-6 rounded-[20px] transition-all duration-200 hover:-translate-y-0.5"
+            style="
+              background: rgba(255, 255, 255, 0.5);
+              box-shadow:
+                6px 6px 12px rgba(136, 79, 34, 0.05),
+                -4px -4px 8px rgba(255, 255, 255, 0.8);
+            "
+            @click="displayLimit += 100"
+          >
             加载更多 (显示 {{ displayedResults.length }} / {{ results.length }})
           </button>
         </div>
