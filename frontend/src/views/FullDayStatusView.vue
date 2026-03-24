@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { getErrorMessage, queryFullDayStatus } from '@/api'
 import { useSystemStatus } from '@/composables/useSystemStatus'
+import { useSearchHistory } from '@/composables/useSearchHistory'
 import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import DateSelector from '@/components/DateSelector.vue'
@@ -11,10 +12,13 @@ import QRCodeCard from '@/components/QRCodeCard.vue'
 import StatusWarning from '@/components/StatusWarning.vue'
 
 const { statusLoading, inTeachingCalendar, hasPermission } = useSystemStatus()
+const { history, addToHistory, clearHistory } = useSearchHistory()
 
 const loading = ref(false)
 const hasSearched = ref(false)
 const resultData = ref(null)
+const showHistory = ref(false)
+const inputFocused = ref(false)
 
 const form = reactive({
   building: '',
@@ -37,6 +41,27 @@ function getEmoji(statusId) {
   return legendItems.find((item) => item.id === statusId)?.emoji || ''
 }
 
+function onInputFocus() {
+  inputFocused.value = true
+  showHistory.value = true
+}
+
+function onInputBlur() {
+  inputFocused.value = false
+  setTimeout(() => {
+    showHistory.value = false
+  }, 200)
+}
+
+function onInputChange() {
+  showHistory.value = false
+}
+
+function selectHistoryItem(keyword) {
+  form.building = keyword
+  showHistory.value = false
+}
+
 async function search() {
   if (!form.building.trim()) {
     return
@@ -45,6 +70,7 @@ async function search() {
   loading.value = true
   hasSearched.value = false
   resultData.value = null
+  showHistory.value = false
 
   try {
     const data = await queryFullDayStatus({
@@ -54,6 +80,7 @@ async function search() {
 
     resultData.value = data
     hasSearched.value = true
+    addToHistory(form.building)
   } catch (error) {
     console.error(error)
     alert(getErrorMessage(error, '查询失败'))
@@ -87,12 +114,40 @@ async function search() {
       <div v-else class="bg-white rounded-2xl p-4 shadow-sm space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-500 mb-1.5 ml-1">教学楼</label>
-          <input
-            v-model="form.building"
-            type="text"
-            class="w-full bg-gray-100 rounded-xl py-3 px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/20"
-            placeholder="例如：老文史楼"
-          />
+          <div class="relative">
+            <input
+              v-model="form.building"
+              type="text"
+              class="w-full bg-gray-100 rounded-xl py-3 px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/20"
+              placeholder="例如：老文史楼"
+              @focus="onInputFocus"
+              @blur="onInputBlur"
+              @input="onInputChange"
+            />
+            <div
+              v-if="inputFocused && showHistory && history.length > 0"
+              class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+            >
+              <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                <span class="text-xs text-gray-400">搜索历史</span>
+                <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="clearHistory">清除</button>
+              </div>
+              <div class="max-h-48 overflow-y-auto">
+                <button
+                  v-for="(item, index) in history"
+                  :key="index"
+                  type="button"
+                  class="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center"
+                  @mousedown.prevent="selectHistoryItem(item)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {{ item }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <DateSelector v-model="form.offset" />
