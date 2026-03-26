@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/model"
@@ -16,6 +17,7 @@ import (
 // StatsService 查询统计服务
 type StatsService struct {
 	db *sql.DB
+	mu sync.Mutex // 保护 SQLite 串行写入
 }
 
 // NewStatsService 创建统计服务，打开或创建 SQLite 数据库
@@ -30,6 +32,24 @@ func NewStatsService(dbPath string) (*StatsService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("打开数据库失败: %w", err)
 	}
+
+	// 关键配置：启用 WAL 模式，允许读写并发
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("设置 WAL 模式失败: %w", err)
+	}
+
+	// 设置 busy_timeout，当数据库被锁时等待 5 秒而非立即报错
+	if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("设置 busy_timeout 失败: %w", err)
+	}
+
+	// 限制连接池：SQLite 是文件级数据库，多连接写入会导致锁冲突
+	// 设置最大打开连接数为 1，确保写入串行化
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
 
 	// 执行迁移
 	if err := migrateSchema(db); err != nil {
@@ -125,6 +145,10 @@ func (s *StatsService) RecordQuery(keyword string) {
 	if keyword == "" {
 		return
 	}
+
+	// 使用互斥锁确保写入串行化，防止 SQLite 并发写入冲突
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	_, err := s.db.Exec(
 		"INSERT INTO query_logs (keyword) VALUES (?)",
