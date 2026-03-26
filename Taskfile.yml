@@ -15,12 +15,29 @@ vars:
   SSH_USER: root
   REMOTE_PATH: /root/easy-qfnu-empty-classrooms
   RESTART_CMD: "supervisorctl restart easy-qfnu-empty-classrooms:easy-qfnu-empty-classrooms_00"
+  # 手动指定 SSH 密钥路径，留空则自动检测
+  IDENTITY_FILE: ""
   # Windows 下可手动指定 Git Bash 路径，留空则自动寻找
   GIT_BASH_PATH: ""
+  # 自动检测 SSH 密钥 (shell 动态变量)
+  SSH_KEY:
+    sh: |
+      if [ -n "{{.IDENTITY_FILE}}" ] && [ -f "{{.IDENTITY_FILE}}" ]; then
+        echo "{{.IDENTITY_FILE}}"
+        exit 0
+      fi
+      for key in id_ed25519 id_rsa; do
+        keypath="$HOME/.ssh/$key"
+        if [ -f "$keypath" ]; then
+          echo "$keypath"
+          exit 0
+        fi
+      done
+      echo "ERROR_NO_SSH_KEY"
 
 tasks:
   default:
-    desc: 完整部署流程 (构建前端 -> 编译 -> 上传 -> 重启)
+    desc: 完整部署流程 (构建前端 -> 编译 -> 上传 -> 重启 -> 清理)
     cmds:
       - task: build-frontend
       - task: compile
@@ -48,43 +65,17 @@ tasks:
     generates:
       - "{{.BINARY_NAME}}"
 
-  detect-ssh-key:
-    desc: 自动检测 SSH 密钥
-    internal: true
-    silent: true
-    cmds:
-      - |
-        if [ -n "{{.IDENTITY_FILE}}" ] && [ -f "{{.IDENTITY_FILE}}" ]; then
-          echo "{{.IDENTITY_FILE}}"
-          exit 0
-        fi
-        for key in id_ed25519 id_rsa; do
-          keypath="$HOME/.ssh/$key"
-          if [ -f "$keypath" ]; then
-            echo "$keypath"
-            exit 0
-          fi
-        done
-        echo "ERROR: 未找到 SSH 密钥，请通过 IDENTITY_FILE 变量指定。" >&2
-        exit 1
-
-  ensure-remote-dir:
-    desc: 确保远程目录存在
-    internal: true
-    cmds:
-      - ssh -i {{.SSH_KEY}} -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "mkdir -p {{.REMOTE_PATH}}"
-
   upload:
     desc: 上传编译产物到服务器
-    deps: [detect-ssh-key]
     platforms: [linux, darwin]
+    preconditions:
+      - sh: '[ "{{.SSH_KEY}}" != "ERROR_NO_SSH_KEY" ]'
+        msg: "未找到 SSH 密钥，请通过 IDENTITY_FILE 变量指定。"
     cmds:
-      - |
-        SSH_KEY=$(task detect-ssh-key)
-        echo "[-] 使用 SSH 密钥: $SSH_KEY"
-        ssh -i "$SSH_KEY" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "mkdir -p {{.REMOTE_PATH}}"
-        tar -c {{.BINARY_NAME}} | ssh -i "$SSH_KEY" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "tar -x -C {{.REMOTE_PATH}} && chmod +x {{.REMOTE_PATH}}/{{.BINARY_NAME}}"
-        echo "[+] 文件上传成功!"
+      - echo "[-] 使用 SSH 密钥:{{" "}}{{.SSH_KEY}}"
+      - ssh -i "{{.SSH_KEY}}" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "mkdir -p {{.REMOTE_PATH}}"
+      - tar -c {{.BINARY_NAME}} | ssh -i "{{.SSH_KEY}}" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "tar -x -C {{.REMOTE_PATH}} && chmod +x {{.REMOTE_PATH}}/{{.BINARY_NAME}}"
+      - echo "[+] 文件上传成功!"
 
   upload-windows:
     desc: Windows 下上传编译产物到服务器 (通过 Git Bash)
@@ -125,15 +116,12 @@ tasks:
                     break
                 }
             }
-            # 通过 git 命令路径推断
             if ([string]::IsNullOrEmpty($bashExe) -or -not (Test-Path $bashExe)) {
                 $gitCmd = Get-Command git -ErrorAction SilentlyContinue
                 if ($gitCmd) {
                     $gitDir = Split-Path (Split-Path $gitCmd.Source -Parent) -Parent
                     $gitBash = Join-Path $gitDir "bin\bash.exe"
-                    if (Test-Path $gitBash) {
-                        $bashExe = $gitBash
-                    }
+                    if (Test-Path $gitBash) { $bashExe = $gitBash }
                 }
             }
         }
@@ -142,7 +130,6 @@ tasks:
         }
         Write-Host "[-] 使用 Git Bash: $bashExe"
 
-        # 路径转换与上传
         $unixKey = $IdentityFile -replace '\\', '/' -replace '^([A-Za-z]):', '/$1'
         $bashCmd = "ssh -i '$unixKey' -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} 'mkdir -p {{.REMOTE_PATH}}' && tar -c {{.BINARY_NAME}} | ssh -i '$unixKey' -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} 'tar -x -C {{.REMOTE_PATH}} && chmod +x {{.REMOTE_PATH}}/{{.BINARY_NAME}}'"
         & $bashExe -c $bashCmd
@@ -151,13 +138,14 @@ tasks:
 
   restart:
     desc: 远程重启服务
-    cmds:
-      - |
-        SSH_KEY=$(task detect-ssh-key)
-        echo "[-] 正在执行远程命令: {{.RESTART_CMD}}"
-        ssh -i "$SSH_KEY" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "{{.RESTART_CMD}}"
-        echo "[+] 远程命令执行成功!"
     platforms: [linux, darwin]
+    preconditions:
+      - sh: '[ "{{.SSH_KEY}}" != "ERROR_NO_SSH_KEY" ]'
+        msg: "未找到 SSH 密钥，请通过 IDENTITY_FILE 变量指定。"
+    cmds:
+      - echo "[-] 正在执行远程命令:{{" "}}{{.RESTART_CMD}}"
+      - ssh -i "{{.SSH_KEY}}" -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "{{.RESTART_CMD}}"
+      - echo "[+] 远程命令执行成功!"
 
   restart-windows:
     desc: Windows 下远程重启服务
@@ -174,7 +162,7 @@ tasks:
             }
         }
         if ([string]::IsNullOrEmpty($IdentityFile) -or -not (Test-Path $IdentityFile)) {
-            Write-Error "未找到 SSH 密钥。"
+            Write-Error "未找到 SSH 密钥，请通过 IDENTITY_FILE 变量指定。"
         }
         Write-Host "[-] 正在执行远程命令: {{.RESTART_CMD}}"
         ssh -i $IdentityFile -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "{{.RESTART_CMD}}"
@@ -190,7 +178,7 @@ tasks:
     desc: Windows 下清理本地构建产物
     platforms: [windows]
     cmds:
-      - cmd: powershell -Command "Remove-Item -Force -ErrorAction SilentlyContinue '{{.BINARY_NAME}}'"
+      - powershell -Command "Remove-Item -Force -ErrorAction SilentlyContinue '{{.BINARY_NAME}}'"
 
   deploy:
     desc: 完整部署 (自动适配平台)
@@ -202,7 +190,6 @@ tasks:
       - task: deploy-clean
 
   deploy-upload:
-    desc: 上传 (自动适配平台)
     internal: true
     cmds:
       - task: upload
@@ -211,7 +198,6 @@ tasks:
         platforms: [windows]
 
   deploy-restart:
-    desc: 重启 (自动适配平台)
     internal: true
     cmds:
       - task: restart
@@ -220,7 +206,6 @@ tasks:
         platforms: [windows]
 
   deploy-clean:
-    desc: 清理 (自动适配平台)
     internal: true
     cmds:
       - task: clean
