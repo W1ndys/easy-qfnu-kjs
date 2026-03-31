@@ -77,7 +77,7 @@ func migrateSchema(db *sql.DB) error {
 
 	// 检测表结构是否为旧版本（包含 classroom 列）
 	var columnCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM PRAGMA table_info(query_logs) WHERE name='classroom'").Scan(&columnCount)
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('query_logs') WHERE name='classroom'").Scan(&columnCount)
 	if err != nil {
 		return fmt.Errorf("检测表结构失败: %w", err)
 	}
