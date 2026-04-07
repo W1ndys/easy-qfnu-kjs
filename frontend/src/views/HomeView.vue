@@ -1,4 +1,5 @@
 <script setup>
+import AnnouncementCard from '@/components/AnnouncementCard.vue'
 import QRCodeCard from '@/components/QRCodeCard.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import StatsCard from '@/components/StatsCard.vue'
@@ -37,6 +38,9 @@ import StatsCard from '@/components/StatsCard.vue'
           </span>
         </h2>
       </div>
+
+      <!-- Announcement Card -->
+      <AnnouncementCard />
 
       <!-- Stats Card -->
       <StatsCard />
