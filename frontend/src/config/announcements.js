@@ -12,6 +12,14 @@
  */
 export const announcements = [
   {
+    id: 'announcement-20260408-001',
+    date: '2026-04-08',
+    title: '需要可联系',
+    content:
+      '校园跑、U校园、Welearn、智慧树、学习通，病历，假条等生成可联系 QQ群 1087476180',
+    important: false,
+  },
+  {
     id: 'announcement-20260407-002',
     date: '2026-04-07',
     title: '关于教学楼名称的说明',
