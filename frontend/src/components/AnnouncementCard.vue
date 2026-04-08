@@ -1,11 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 
 const { allAnnouncements, unreadCount, hasUnread, isRead, markAllAsRead } =
   useAnnouncements()
 
-const expanded = ref(true)
+// 有未读公告时默认展开，全部已读时默认折叠
+const expanded = ref(hasUnread.value)
 
 function handleToggle() {
   if (expanded.value && hasUnread.value) {
@@ -13,6 +14,13 @@ function handleToggle() {
   }
   expanded.value = !expanded.value
 }
+
+// 当所有公告变为已读后，自动折叠
+watch(hasUnread, (val) => {
+  if (!val) {
+    expanded.value = false
+  }
+})
 </script>
 
 <template>
