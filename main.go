@@ -9,6 +9,7 @@ import (
 	"time"
 
 	v1 "github.com/W1ndys/easy-qfnu-empty-classrooms/internal/api/v1"
+	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/middleware"
 	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/service"
 	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/cas"
 	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/logger"
@@ -98,12 +99,15 @@ func main() {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", content)
 	}
 
+	// 搜索接口速率限制：基于 IP + User-Agent，5 秒内只能查询一次
+	searchRateLimiter := middleware.NewRateLimiter(5 * time.Second)
+
 	// API 路由
 	api := r.Group("/api/v1")
 	{
 		api.GET("/status", apiHandler.GetStatus)
-		api.POST("/query", apiHandler.QueryClassrooms)
-		api.POST("/query-full-day", apiHandler.QueryFullDayStatus)
+		api.POST("/query", searchRateLimiter.Middleware(), apiHandler.QueryClassrooms)
+		api.POST("/query-full-day", searchRateLimiter.Middleware(), apiHandler.QueryFullDayStatus)
 		api.GET("/stats", apiHandler.GetStats)
 	}
 
