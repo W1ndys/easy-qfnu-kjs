@@ -4,8 +4,11 @@ import { getErrorMessage, queryFullDayStatus } from '@/api'
 import { useSystemStatus } from '@/composables/useSystemStatus'
 import { useSearchHistory } from '@/composables/useSearchHistory'
 import { useTopBuildings } from '@/composables/useTopBuildings'
+import { useBuildingAliasReminder } from '@/composables/useBuildingAliasReminder'
+import { useAlertDialog } from '@/composables/useAlertDialog'
 import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import DateSelector from '@/components/DateSelector.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -15,6 +18,13 @@ import StatusWarning from '@/components/StatusWarning.vue'
 const { statusLoading, inTeachingCalendar, hasPermission } = useSystemStatus()
 const { history, addToHistory, clearHistory } = useSearchHistory()
 const { topQueries } = useTopBuildings()
+const {
+  dialogOpen: aliasDialogOpen,
+  normalizeBuildingName,
+  confirmReminder,
+  cancelReminder,
+} = useBuildingAliasReminder()
+const { alertState, showAlert, closeAlert } = useAlertDialog()
 
 function selectTopQuery(query) {
   form.building = query.building
@@ -72,9 +82,13 @@ function selectHistoryItem(keyword) {
 }
 
 async function search() {
-  if (!form.building.trim()) {
+  const building = await normalizeBuildingName(form.building)
+
+  if (!building) {
     return
   }
+
+  form.building = building
 
   loading.value = true
   hasSearched.value = false
@@ -83,16 +97,18 @@ async function search() {
 
   try {
     const data = await queryFullDayStatus({
-      building: form.building,
+      building,
       date_offset: form.offset,
     })
 
     resultData.value = data
     hasSearched.value = true
-    addToHistory(form.building)
+    addToHistory(building)
   } catch (error) {
     console.error(error)
-    alert(getErrorMessage(error, '查询失败'))
+    showAlert(getErrorMessage(error, '查询失败'), {
+      title: '查询失败',
+    })
   } finally {
     loading.value = false
   }
@@ -300,6 +316,26 @@ async function search() {
     </main>
 
     <AppFooter />
+
+    <ConfirmDialog
+      :open="aliasDialogOpen"
+      title="教学楼名称提醒"
+      message="你是否要搜索“综合教学楼”？注意老校区综合楼全称是“综合教学楼”哦！~"
+      confirm-text="改为综合教学楼"
+      cancel-text="继续搜索综合楼"
+      @confirm="confirmReminder"
+      @cancel="cancelReminder"
+    />
+
+    <ConfirmDialog
+      :open="alertState.open"
+      :title="alertState.title"
+      :message="alertState.message"
+      :confirm-text="alertState.buttonText"
+      :show-cancel="false"
+      @confirm="closeAlert"
+      @cancel="closeAlert"
+    />
   </div>
 </template>
 
