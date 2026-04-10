@@ -30,6 +30,11 @@ export async function getStats() {
   return data
 }
 
+export async function getTopBuildings() {
+  const { data } = await api.get('/api/v1/top-buildings')
+  return data
+}
+
 export function getErrorMessage(error, fallback = '请求失败，请稍后重试') {
   return error?.response?.data?.error || fallback
 }

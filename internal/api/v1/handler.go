@@ -62,9 +62,16 @@ func (h *Handler) QueryClassrooms(c *gin.Context) {
 		return
 	}
 
-	// 异步记录搜索关键词统计
+	// 异步记录搜索统计（含完整参数和结果数量）
 	if h.statsService != nil {
-		go h.statsService.RecordQuery(req.BuildingName)
+		resultCount := len(resp.Classrooms)
+		go h.statsService.RecordQuery(model.QueryRecord{
+			Keyword:     req.BuildingName,
+			DateOffset:  req.DateOffset,
+			StartNode:   req.StartNode,
+			EndNode:     req.EndNode,
+			ResultCount: resultCount,
+		})
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -89,9 +96,14 @@ func (h *Handler) QueryFullDayStatus(c *gin.Context) {
 		return
 	}
 
-	// 异步记录搜索关键词统计
+	// 异步记录搜索统计（全天状态查询无节次参数）
 	if h.statsService != nil {
-		go h.statsService.RecordQuery(req.BuildingName)
+		resultCount := len(resp.Classrooms)
+		go h.statsService.RecordQuery(model.QueryRecord{
+			Keyword:     req.BuildingName,
+			DateOffset:  req.DateOffset,
+			ResultCount: resultCount,
+		})
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -111,4 +123,24 @@ func (h *Handler) GetStats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, stats)
+}
+
+// GetTopBuildings 获取搜索排行前 N 的热门查询组合
+func (h *Handler) GetTopBuildings(c *gin.Context) {
+	if h.statsService == nil {
+		c.JSON(http.StatusOK, &model.TopQueriesResponse{Queries: []model.TopQueryItem{}})
+		return
+	}
+
+	queries, err := h.statsService.GetTopQueries(5)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取热门搜索组合失败"})
+		return
+	}
+
+	if queries == nil {
+		queries = []model.TopQueryItem{}
+	}
+
+	c.JSON(http.StatusOK, &model.TopQueriesResponse{Queries: queries})
 }

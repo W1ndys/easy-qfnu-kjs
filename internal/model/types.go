@@ -2,10 +2,10 @@ package model
 
 // QueryRequest 前端查询请求参数
 type QueryRequest struct {
-	BuildingName string `json:"building"`     // 教学楼名称 (如 "老文史楼")
-	StartNode    string `json:"start_node"`   // 起始节次 (如 "01")
-	EndNode      string `json:"end_node"`     // 终止节次 (如 "02")
-	DateOffset   int    `json:"date_offset"`  // 日期偏移 (0=今天, 1=明天...)
+	BuildingName string `json:"building"`    // 教学楼名称 (如 "老文史楼")
+	StartNode    string `json:"start_node"`  // 起始节次 (如 "01")
+	EndNode      string `json:"end_node"`    // 终止节次 (如 "02")
+	DateOffset   int    `json:"date_offset"` // 日期偏移 (0=今天, 1=明天...)
 }
 
 // ClassroomResponse 返回给前端的响应
@@ -65,13 +65,36 @@ type StatsResponse struct {
 	MonthTop   string `json:"month_top"`   // 本月最热教室
 }
 
+// QueryRecord 搜索记录参数，用于写入数据库
+type QueryRecord struct {
+	Keyword     string // 教学楼名称
+	DateOffset  int    // 日期偏移 (0=今天, 1=明天...)
+	StartNode   string // 起始节次 (如 "01")，全天状态查询时为空
+	EndNode     string // 终止节次 (如 "11")，全天状态查询时为空
+	ResultCount int    // 搜索结果数量 (空教室数 / 教室数)
+}
+
+// TopQueryItem 热门搜索组合条目
+type TopQueryItem struct {
+	Building   string `json:"building"`    // 教学楼名称
+	DateOffset int    `json:"date_offset"` // 日期偏移
+	StartNode  string `json:"start_node"`  // 起始节次
+	EndNode    string `json:"end_node"`    // 终止节次
+	Count      int    `json:"count"`       // 结果非空的搜索次数
+}
+
+// TopQueriesResponse 热门搜索组合响应
+type TopQueriesResponse struct {
+	Queries []TopQueryItem `json:"queries"` // 热门搜索组合列表
+}
+
 // FullDayStatusResponse 全天状态查询响应
 type FullDayStatusResponse struct {
-	Date       string                `json:"date"`        // 查询日期 (YYYY-MM-DD)
-	Week       int                   `json:"week"`        // 教学周
-	DayOfWeek  int                   `json:"day_of_week"` // 星期几 (1-7)
-	CurrentTerm string               `json:"current_term"` // 当前学期 (2025-2026-1)
-	Building   string                `json:"building"`    // 教学楼名称
-	NodeList   []NodeInfo            `json:"node_list"`   // 节次列表（用于前端表头）
-	Classrooms []ClassroomFullStatus `json:"classrooms"`  // 各教室全天状态列表
+	Date        string                `json:"date"`         // 查询日期 (YYYY-MM-DD)
+	Week        int                   `json:"week"`         // 教学周
+	DayOfWeek   int                   `json:"day_of_week"`  // 星期几 (1-7)
+	CurrentTerm string                `json:"current_term"` // 当前学期 (2025-2026-1)
+	Building    string                `json:"building"`     // 教学楼名称
+	NodeList    []NodeInfo            `json:"node_list"`    // 节次列表（用于前端表头）
+	Classrooms  []ClassroomFullStatus `json:"classrooms"`   // 各教室全天状态列表
 }
