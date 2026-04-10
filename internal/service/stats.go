@@ -75,16 +75,16 @@ func migrateSchema(db *sql.DB) error {
 		return createNewTable(db)
 	}
 
-	// 检测表结构是否为旧版本（包含 classroom 列）
-	var columnCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('query_logs') WHERE name='classroom'").Scan(&columnCount)
+	// 检测表是否包含 result_count 列（v3 新结构标志）
+	var hasResultCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('query_logs') WHERE name='result_count'").Scan(&hasResultCount)
 	if err != nil {
 		return fmt.Errorf("检测表结构失败: %w", err)
 	}
 
-	if columnCount > 0 {
-		// 旧表结构，需要迁移
-		logger.Warn("检测到旧版 query_logs 表结构，开始迁移...")
+	if hasResultCount == 0 {
+		// 旧表结构（无论是 v1 classroom 版还是 v2 keyword-only 版），都需要迁移
+		logger.Warn("检测到旧版 query_logs 表结构，开始迁移到 v3...")
 		return migrateFromOldSchema(db)
 	}
 
@@ -98,10 +98,15 @@ func createNewTable(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS query_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			keyword TEXT NOT NULL,
+			date_offset INTEGER NOT NULL DEFAULT 0,
+			start_node TEXT NOT NULL DEFAULT '',
+			end_node TEXT NOT NULL DEFAULT '',
+			result_count INTEGER NOT NULL DEFAULT 0,
 			queried_at DATETIME DEFAULT (datetime('now', 'localtime'))
 		);
 		CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at);
 		CREATE INDEX IF NOT EXISTS idx_keyword ON query_logs(keyword);
+		CREATE INDEX IF NOT EXISTS idx_combo ON query_logs(keyword, date_offset, start_node, end_node, result_count);
 	`)
 	if err != nil {
 		return fmt.Errorf("创建表失败: %w", err)
@@ -123,7 +128,7 @@ func migrateFromOldSchema(db *sql.DB) error {
 		return err
 	}
 
-	logger.Warn("旧版 query_logs 表已删除，已创建新表结构")
+	logger.Warn("旧版 query_logs 表已删除，已创建 v3 新表结构")
 	return nil
 }
 
@@ -137,12 +142,16 @@ func createIndexesIfNotExist(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("创建 keyword 索引失败: %w", err)
 	}
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS idx_combo ON query_logs(keyword, date_offset, start_node, end_node, result_count)")
+	if err != nil {
+		return fmt.Errorf("创建 combo 索引失败: %w", err)
+	}
 	return nil
 }
 
-// RecordQuery 记录一次搜索关键词查询（异步调用）
-func (s *StatsService) RecordQuery(keyword string) {
-	if keyword == "" {
+// RecordQuery 记录一次搜索查询（异步调用），包含完整的搜索参数和结果数量
+func (s *StatsService) RecordQuery(record model.QueryRecord) {
+	if record.Keyword == "" {
 		return
 	}
 
@@ -151,11 +160,11 @@ func (s *StatsService) RecordQuery(keyword string) {
 	defer s.mu.Unlock()
 
 	_, err := s.db.Exec(
-		"INSERT INTO query_logs (keyword) VALUES (?)",
-		keyword,
+		"INSERT INTO query_logs (keyword, date_offset, start_node, end_node, result_count) VALUES (?, ?, ?, ?, ?)",
+		record.Keyword, record.DateOffset, record.StartNode, record.EndNode, record.ResultCount,
 	)
 	if err != nil {
-		logger.Warn("记录搜索关键词失败: %v", err)
+		logger.Warn("记录搜索查询失败: %v", err)
 	}
 }
 
@@ -225,34 +234,39 @@ func (s *StatsService) GetStats() (*model.StatsResponse, error) {
 	return resp, nil
 }
 
-// GetTopBuildings 获取搜索排行前 N 的教学楼（基于全部历史数据）
-func (s *StatsService) GetTopBuildings(limit int) ([]model.TopBuildingItem, error) {
+// GetTopQueries 获取搜索排行前 N 的查询组合（仅统计结果非空的记录）
+func (s *StatsService) GetTopQueries(limit int) ([]model.TopQueryItem, error) {
 	if limit <= 0 {
 		limit = 5
 	}
 
 	rows, err := s.db.Query(
-		"SELECT keyword, COUNT(*) AS cnt FROM query_logs GROUP BY keyword ORDER BY cnt DESC LIMIT ?",
+		`SELECT keyword, date_offset, start_node, end_node, COUNT(*) AS cnt
+		 FROM query_logs
+		 WHERE result_count > 0
+		 GROUP BY keyword, date_offset, start_node, end_node
+		 ORDER BY cnt DESC
+		 LIMIT ?`,
 		limit,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("查询热门教学楼失败: %w", err)
+		return nil, fmt.Errorf("查询热门搜索组合失败: %w", err)
 	}
 	defer rows.Close()
 
-	var buildings []model.TopBuildingItem
+	var queries []model.TopQueryItem
 	for rows.Next() {
-		var item model.TopBuildingItem
-		if err := rows.Scan(&item.Name, &item.Count); err != nil {
-			return nil, fmt.Errorf("扫描热门教学楼数据失败: %w", err)
+		var item model.TopQueryItem
+		if err := rows.Scan(&item.Building, &item.DateOffset, &item.StartNode, &item.EndNode, &item.Count); err != nil {
+			return nil, fmt.Errorf("扫描热门搜索组合数据失败: %w", err)
 		}
-		buildings = append(buildings, item)
+		queries = append(queries, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("遍历热门教学楼结果失败: %w", err)
+		return nil, fmt.Errorf("遍历热门搜索组合结果失败: %w", err)
 	}
 
-	return buildings, nil
+	return queries, nil
 }
 
 // Close 关闭数据库连接

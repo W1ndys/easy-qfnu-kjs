@@ -65,15 +65,27 @@ type StatsResponse struct {
 	MonthTop   string `json:"month_top"`   // 本月最热教室
 }
 
-// TopBuildingItem 热门教学楼条目
-type TopBuildingItem struct {
-	Name  string `json:"name"`  // 教学楼名称
-	Count int    `json:"count"` // 搜索次数
+// QueryRecord 搜索记录参数，用于写入数据库
+type QueryRecord struct {
+	Keyword     string // 教学楼名称
+	DateOffset  int    // 日期偏移 (0=今天, 1=明天...)
+	StartNode   string // 起始节次 (如 "01")，全天状态查询时为空
+	EndNode     string // 终止节次 (如 "11")，全天状态查询时为空
+	ResultCount int    // 搜索结果数量 (空教室数 / 教室数)
 }
 
-// TopBuildingsResponse 热门教学楼响应
-type TopBuildingsResponse struct {
-	Buildings []TopBuildingItem `json:"buildings"` // 热门教学楼列表
+// TopQueryItem 热门搜索组合条目
+type TopQueryItem struct {
+	Building   string `json:"building"`    // 教学楼名称
+	DateOffset int    `json:"date_offset"` // 日期偏移
+	StartNode  string `json:"start_node"`  // 起始节次
+	EndNode    string `json:"end_node"`    // 终止节次
+	Count      int    `json:"count"`       // 结果非空的搜索次数
+}
+
+// TopQueriesResponse 热门搜索组合响应
+type TopQueriesResponse struct {
+	Queries []TopQueryItem `json:"queries"` // 热门搜索组合列表
 }
 
 // FullDayStatusResponse 全天状态查询响应
