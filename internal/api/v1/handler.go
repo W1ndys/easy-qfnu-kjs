@@ -112,3 +112,23 @@ func (h *Handler) GetStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+// GetTopBuildings 获取搜索排行前 N 的教学楼
+func (h *Handler) GetTopBuildings(c *gin.Context) {
+	if h.statsService == nil {
+		c.JSON(http.StatusOK, &model.TopBuildingsResponse{Buildings: []model.TopBuildingItem{}})
+		return
+	}
+
+	buildings, err := h.statsService.GetTopBuildings(5)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取热门教学楼失败"})
+		return
+	}
+
+	if buildings == nil {
+		buildings = []model.TopBuildingItem{}
+	}
+
+	c.JSON(http.StatusOK, &model.TopBuildingsResponse{Buildings: buildings})
+}
