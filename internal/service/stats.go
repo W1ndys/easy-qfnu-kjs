@@ -225,6 +225,36 @@ func (s *StatsService) GetStats() (*model.StatsResponse, error) {
 	return resp, nil
 }
 
+// GetTopBuildings 获取搜索排行前 N 的教学楼（基于全部历史数据）
+func (s *StatsService) GetTopBuildings(limit int) ([]model.TopBuildingItem, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+
+	rows, err := s.db.Query(
+		"SELECT keyword, COUNT(*) AS cnt FROM query_logs GROUP BY keyword ORDER BY cnt DESC LIMIT ?",
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("查询热门教学楼失败: %w", err)
+	}
+	defer rows.Close()
+
+	var buildings []model.TopBuildingItem
+	for rows.Next() {
+		var item model.TopBuildingItem
+		if err := rows.Scan(&item.Name, &item.Count); err != nil {
+			return nil, fmt.Errorf("扫描热门教学楼数据失败: %w", err)
+		}
+		buildings = append(buildings, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("遍历热门教学楼结果失败: %w", err)
+	}
+
+	return buildings, nil
+}
+
 // Close 关闭数据库连接
 func (s *StatsService) Close() error {
 	return s.db.Close()

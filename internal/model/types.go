@@ -2,10 +2,10 @@ package model
 
 // QueryRequest 前端查询请求参数
 type QueryRequest struct {
-	BuildingName string `json:"building"`     // 教学楼名称 (如 "老文史楼")
-	StartNode    string `json:"start_node"`   // 起始节次 (如 "01")
-	EndNode      string `json:"end_node"`     // 终止节次 (如 "02")
-	DateOffset   int    `json:"date_offset"`  // 日期偏移 (0=今天, 1=明天...)
+	BuildingName string `json:"building"`    // 教学楼名称 (如 "老文史楼")
+	StartNode    string `json:"start_node"`  // 起始节次 (如 "01")
+	EndNode      string `json:"end_node"`    // 终止节次 (如 "02")
+	DateOffset   int    `json:"date_offset"` // 日期偏移 (0=今天, 1=明天...)
 }
 
 // ClassroomResponse 返回给前端的响应
@@ -65,13 +65,24 @@ type StatsResponse struct {
 	MonthTop   string `json:"month_top"`   // 本月最热教室
 }
 
+// TopBuildingItem 热门教学楼条目
+type TopBuildingItem struct {
+	Name  string `json:"name"`  // 教学楼名称
+	Count int    `json:"count"` // 搜索次数
+}
+
+// TopBuildingsResponse 热门教学楼响应
+type TopBuildingsResponse struct {
+	Buildings []TopBuildingItem `json:"buildings"` // 热门教学楼列表
+}
+
 // FullDayStatusResponse 全天状态查询响应
 type FullDayStatusResponse struct {
-	Date       string                `json:"date"`        // 查询日期 (YYYY-MM-DD)
-	Week       int                   `json:"week"`        // 教学周
-	DayOfWeek  int                   `json:"day_of_week"` // 星期几 (1-7)
-	CurrentTerm string               `json:"current_term"` // 当前学期 (2025-2026-1)
-	Building   string                `json:"building"`    // 教学楼名称
-	NodeList   []NodeInfo            `json:"node_list"`   // 节次列表（用于前端表头）
-	Classrooms []ClassroomFullStatus `json:"classrooms"`  // 各教室全天状态列表
+	Date        string                `json:"date"`         // 查询日期 (YYYY-MM-DD)
+	Week        int                   `json:"week"`         // 教学周
+	DayOfWeek   int                   `json:"day_of_week"`  // 星期几 (1-7)
+	CurrentTerm string                `json:"current_term"` // 当前学期 (2025-2026-1)
+	Building    string                `json:"building"`     // 教学楼名称
+	NodeList    []NodeInfo            `json:"node_list"`    // 节次列表（用于前端表头）
+	Classrooms  []ClassroomFullStatus `json:"classrooms"`   // 各教室全天状态列表
 }
