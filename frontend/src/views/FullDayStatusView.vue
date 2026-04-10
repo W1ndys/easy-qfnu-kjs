@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { getErrorMessage, queryFullDayStatus } from '@/api'
 import { useSystemStatus } from '@/composables/useSystemStatus'
 import { useSearchHistory } from '@/composables/useSearchHistory'
+import { useTopBuildings } from '@/composables/useTopBuildings'
 import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import DateSelector from '@/components/DateSelector.vue'
@@ -13,6 +14,12 @@ import StatusWarning from '@/components/StatusWarning.vue'
 
 const { statusLoading, inTeachingCalendar, hasPermission } = useSystemStatus()
 const { history, addToHistory, clearHistory } = useSearchHistory()
+const { topBuildings } = useTopBuildings()
+
+function selectBuilding(name) {
+  form.building = name
+  showHistory.value = false
+}
 
 const loading = ref(false)
 const hasSearched = ref(false)
@@ -172,6 +179,25 @@ async function search() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Top buildings quick select -->
+          <div v-if="topBuildings.length > 0" class="flex flex-wrap gap-2">
+            <span class="text-xs text-clay-muted font-medium leading-7 mr-0.5">热搜</span>
+            <button
+              v-for="name in topBuildings"
+              :key="name"
+              type="button"
+              class="px-3 py-1 text-xs font-medium rounded-full transition-all duration-200 hover:-translate-y-0.5"
+              :class="form.building === name ? 'text-white' : 'text-primary'"
+              :style="form.building === name
+                ? 'background: linear-gradient(135deg, rgb(136, 79, 34) 0%, rgb(170, 110, 60) 100%); box-shadow: 4px 4px 8px rgba(136, 79, 34, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.3);'
+                : 'background: rgba(255, 255, 255, 0.6); box-shadow: 4px 4px 8px rgba(136, 79, 34, 0.06), -3px -3px 6px rgba(255, 255, 255, 0.8), inset 2px 2px 4px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(136, 79, 34, 0.02);'
+              "
+              @click="selectBuilding(name)"
+            >
+              {{ name }}
+            </button>
           </div>
 
           <DateSelector v-model="form.offset" />
