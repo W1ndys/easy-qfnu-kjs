@@ -45,6 +45,17 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 3 个 Composables：useDateSelection, useSearchHistory, useSystemStatus
   - CSS 变量定义在 `src/assets/css/main.css` 中
 
+### 速率限制中间件
+- Date: 2026-04-10
+- Context: Agent 在执行搜索接口限流功能时发现
+- Category: 代码模式
+- Instructions:
+  - 速率限制中间件位于 `internal/middleware/ratelimit.go`
+  - 使用 IP + User-Agent 组合作为限流 key，通过 SHA256 哈希 UA 避免 map key 过长
+  - 内存 map + sync.Mutex 实现，无第三方依赖
+  - 后台协程定期清理过期条目，防止内存泄漏
+  - 在 main.go 中以路由级中间件方式应用，仅作用于 `/api/v1/query` 和 `/api/v1/query-full-day`
+
 ### 用户主色调偏好
 - Date: 2026-03-24
 - Context: 用户在设计改造需求中明确指出
