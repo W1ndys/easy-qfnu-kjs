@@ -88,6 +88,72 @@ type TopQueriesResponse struct {
 	Queries []TopQueryItem `json:"queries"` // 热门搜索组合列表
 }
 
+// DashboardRequest 数据大屏请求参数
+type DashboardRequest struct {
+	Range string `form:"range"` // 时间范围: today, week, month
+}
+
+// DashboardResponse 数据大屏综合统计响应
+type DashboardResponse struct {
+	Overview    DashboardOverview `json:"overview"`     // 总览数字
+	Trend       []TrendPoint      `json:"trend"`        // 查询次数趋势
+	TopKeywords []KeywordRankItem `json:"top_keywords"` // 搜索词排行
+	NodeDist    []NodeDistItem    `json:"node_dist"`    // 节次分布
+	ResultStats ResultStatsData   `json:"result_stats"` // 查询结果统计
+	HourlyDist  []HourlyDistItem  `json:"hourly_dist"`  // 按小时分布（高峰时段）
+}
+
+// DashboardOverview 总览数据
+type DashboardOverview struct {
+	TotalCount     int     `json:"total_count"`      // 时间段内总查询次数
+	UniqueKeywords int     `json:"unique_keywords"`  // 独立搜索词数
+	AvgResultCount float64 `json:"avg_result_count"` // 平均结果数量
+	MaxResultCount int     `json:"max_result_count"` // 单次最多结果数
+	TodayCount     int     `json:"today_count"`      // 今日查询次数
+	WeekCount      int     `json:"week_count"`       // 本周查询次数
+	MonthCount     int     `json:"month_count"`      // 本月查询次数
+}
+
+// TrendPoint 趋势数据点
+type TrendPoint struct {
+	Label string `json:"label"` // 时间标签 (如 "08:00", "2026-04-17")
+	Count int    `json:"count"` // 查询次数
+}
+
+// KeywordRankItem 搜索词排行条目
+type KeywordRankItem struct {
+	Keyword string `json:"keyword"` // 搜索词
+	Count   int    `json:"count"`   // 查询次数
+}
+
+// NodeDistItem 节次分布条目
+type NodeDistItem struct {
+	Node  string `json:"node"`  // 节次标识 (如 "01-02", "03-04")
+	Count int    `json:"count"` // 查询次数
+}
+
+// ResultStatsData 查询结果统计
+type ResultStatsData struct {
+	AvgCount     float64          `json:"avg_count"`      // 平均结果数
+	MaxCount     int              `json:"max_count"`      // 最大结果数
+	MinCount     int              `json:"min_count"`      // 最小结果数（非零）
+	ZeroCount    int              `json:"zero_count"`     // 无结果的查询次数
+	NonZeroCount int              `json:"non_zero_count"` // 有结果的查询次数
+	Distribution []ResultDistItem `json:"distribution"`   // 结果数量区间分布
+}
+
+// ResultDistItem 结果数量区间分布条目
+type ResultDistItem struct {
+	Range string `json:"range"` // 区间标签 (如 "0", "1-5", "6-10")
+	Count int    `json:"count"` // 落入该区间的查询次数
+}
+
+// HourlyDistItem 每小时查询分布
+type HourlyDistItem struct {
+	Hour  int `json:"hour"`  // 小时 (0-23)
+	Count int `json:"count"` // 查询次数
+}
+
 // FullDayStatusResponse 全天状态查询响应
 type FullDayStatusResponse struct {
 	Date        string                `json:"date"`         // 查询日期 (YYYY-MM-DD)

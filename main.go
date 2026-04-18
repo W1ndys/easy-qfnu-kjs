@@ -110,6 +110,7 @@ func main() {
 		api.POST("/query-full-day", searchRateLimiter.Middleware(), apiHandler.QueryFullDayStatus)
 		api.GET("/stats", apiHandler.GetStats)
 		api.GET("/top-buildings", apiHandler.GetTopBuildings)
+		api.GET("/dashboard", apiHandler.GetDashboard)
 	}
 
 	// 静态资源路由

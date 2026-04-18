@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import EmptyClassroomView from '@/views/EmptyClassroomView.vue'
 import FullDayStatusView from '@/views/FullDayStatusView.vue'
+import DashboardView from '@/views/DashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -9,6 +10,7 @@ const router = createRouter({
     { path: '/', name: 'home', component: HomeView },
     { path: '/empty-classroom', name: 'empty-classroom', component: EmptyClassroomView },
     { path: '/full-day-status', name: 'full-day-status', component: FullDayStatusView },
+    { path: '/dashboard', name: 'dashboard', component: DashboardView },
   ],
 })
 
