@@ -269,6 +269,334 @@ func (s *StatsService) GetTopQueries(limit int) ([]model.TopQueryItem, error) {
 	return queries, nil
 }
 
+// GetDashboardData 获取数据大屏综合统计数据
+func (s *StatsService) GetDashboardData(timeRange string) (*model.DashboardResponse, error) {
+	now := time.Now()
+	var startTime string
+
+	switch timeRange {
+	case "today":
+		startTime = now.Format("2006-01-02") + " 00:00:00"
+	case "week":
+		startTime = now.AddDate(0, 0, -6).Format("2006-01-02") + " 00:00:00"
+	case "month":
+		startTime = now.AddDate(0, 0, -29).Format("2006-01-02") + " 00:00:00"
+	default:
+		startTime = now.Format("2006-01-02") + " 00:00:00"
+	}
+
+	resp := &model.DashboardResponse{}
+
+	// 并行获取各项数据
+	var overviewErr, trendErr, keywordErr, nodeErr, resultErr, hourlyErr error
+	var wg sync.WaitGroup
+
+	wg.Add(6)
+
+	go func() {
+		defer wg.Done()
+		resp.Overview, overviewErr = s.getDashboardOverview(startTime)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp.Trend, trendErr = s.getDashboardTrend(timeRange, startTime, now)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp.TopKeywords, keywordErr = s.getDashboardKeywords(startTime)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp.NodeDist, nodeErr = s.getDashboardNodeDist(startTime)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp.ResultStats, resultErr = s.getDashboardResultStats(startTime)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp.HourlyDist, hourlyErr = s.getDashboardHourlyDist(startTime)
+	}()
+
+	wg.Wait()
+
+	// 返回第一个遇到的错误
+	for _, err := range []error{overviewErr, trendErr, keywordErr, nodeErr, resultErr, hourlyErr} {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return resp, nil
+}
+
+// getDashboardOverview 获取总览数据
+func (s *StatsService) getDashboardOverview(startTime string) (model.DashboardOverview, error) {
+	var o model.DashboardOverview
+	now := time.Now()
+
+	// 时间段内总查询次数 + 独立搜索词数 + 平均结果数 + 最大结果数
+	err := s.db.QueryRow(`
+		SELECT COUNT(*), COUNT(DISTINCT keyword),
+			   COALESCE(AVG(result_count), 0), COALESCE(MAX(result_count), 0)
+		FROM query_logs WHERE queried_at >= ?`, startTime,
+	).Scan(&o.TotalCount, &o.UniqueKeywords, &o.AvgResultCount, &o.MaxResultCount)
+	if err != nil {
+		return o, fmt.Errorf("查询总览数据失败: %w", err)
+	}
+
+	// 今日
+	todayStart := now.Format("2006-01-02") + " 00:00:00"
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", todayStart).Scan(&o.TodayCount); err != nil {
+		return o, fmt.Errorf("查询今日统计失败: %w", err)
+	}
+
+	// 本周
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	weekStart := now.AddDate(0, 0, -(weekday-1)).Format("2006-01-02") + " 00:00:00"
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", weekStart).Scan(&o.WeekCount); err != nil {
+		return o, fmt.Errorf("查询本周统计失败: %w", err)
+	}
+
+	// 本月
+	monthStart := now.Format("2006-01") + "-01 00:00:00"
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM query_logs WHERE queried_at >= ?", monthStart).Scan(&o.MonthCount); err != nil {
+		return o, fmt.Errorf("查询本月统计失败: %w", err)
+	}
+
+	return o, nil
+}
+
+// getDashboardTrend 获取趋势数据
+func (s *StatsService) getDashboardTrend(timeRange, startTime string, now time.Time) ([]model.TrendPoint, error) {
+	var query string
+	var points []model.TrendPoint
+
+	switch timeRange {
+	case "today":
+		// 按小时分组
+		query = `SELECT strftime('%H', queried_at) AS label, COUNT(*) AS cnt
+				 FROM query_logs WHERE queried_at >= ?
+				 GROUP BY label ORDER BY label`
+		rows, err := s.db.Query(query, startTime)
+		if err != nil {
+			return nil, fmt.Errorf("查询今日趋势失败: %w", err)
+		}
+		defer rows.Close()
+
+		hourMap := make(map[string]int)
+		for rows.Next() {
+			var label string
+			var count int
+			if err := rows.Scan(&label, &count); err != nil {
+				return nil, err
+			}
+			hourMap[label] = count
+		}
+		// 填充 0-23 小时
+		for h := 0; h < 24; h++ {
+			label := fmt.Sprintf("%02d:00", h)
+			key := fmt.Sprintf("%02d", h)
+			points = append(points, model.TrendPoint{Label: label, Count: hourMap[key]})
+		}
+
+	case "week":
+		// 按天分组，最近 7 天
+		query = `SELECT strftime('%Y-%m-%d', queried_at) AS label, COUNT(*) AS cnt
+				 FROM query_logs WHERE queried_at >= ?
+				 GROUP BY label ORDER BY label`
+		rows, err := s.db.Query(query, startTime)
+		if err != nil {
+			return nil, fmt.Errorf("查询本周趋势失败: %w", err)
+		}
+		defer rows.Close()
+
+		dayMap := make(map[string]int)
+		for rows.Next() {
+			var label string
+			var count int
+			if err := rows.Scan(&label, &count); err != nil {
+				return nil, err
+			}
+			dayMap[label] = count
+		}
+		// 填充最近 7 天
+		for i := 6; i >= 0; i-- {
+			d := now.AddDate(0, 0, -i)
+			label := d.Format("01-02")
+			key := d.Format("2006-01-02")
+			points = append(points, model.TrendPoint{Label: label, Count: dayMap[key]})
+		}
+
+	case "month":
+		// 按天分组，最近 30 天
+		query = `SELECT strftime('%Y-%m-%d', queried_at) AS label, COUNT(*) AS cnt
+				 FROM query_logs WHERE queried_at >= ?
+				 GROUP BY label ORDER BY label`
+		rows, err := s.db.Query(query, startTime)
+		if err != nil {
+			return nil, fmt.Errorf("查询本月趋势失败: %w", err)
+		}
+		defer rows.Close()
+
+		dayMap := make(map[string]int)
+		for rows.Next() {
+			var label string
+			var count int
+			if err := rows.Scan(&label, &count); err != nil {
+				return nil, err
+			}
+			dayMap[label] = count
+		}
+		// 填充最近 30 天
+		for i := 29; i >= 0; i-- {
+			d := now.AddDate(0, 0, -i)
+			label := d.Format("01-02")
+			key := d.Format("2006-01-02")
+			points = append(points, model.TrendPoint{Label: label, Count: dayMap[key]})
+		}
+
+	default:
+		return nil, fmt.Errorf("不支持的时间范围: %s", timeRange)
+	}
+
+	return points, nil
+}
+
+// getDashboardKeywords 获取搜索词排行
+func (s *StatsService) getDashboardKeywords(startTime string) ([]model.KeywordRankItem, error) {
+	rows, err := s.db.Query(`
+		SELECT keyword, COUNT(*) AS cnt
+		FROM query_logs WHERE queried_at >= ?
+		GROUP BY keyword ORDER BY cnt DESC LIMIT 10`, startTime)
+	if err != nil {
+		return nil, fmt.Errorf("查询搜索词排行失败: %w", err)
+	}
+	defer rows.Close()
+
+	var items []model.KeywordRankItem
+	for rows.Next() {
+		var item model.KeywordRankItem
+		if err := rows.Scan(&item.Keyword, &item.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []model.KeywordRankItem{}
+	}
+	return items, nil
+}
+
+// getDashboardNodeDist 获取节次分布
+func (s *StatsService) getDashboardNodeDist(startTime string) ([]model.NodeDistItem, error) {
+	rows, err := s.db.Query(`
+		SELECT start_node || '-' || end_node AS node_range, COUNT(*) AS cnt
+		FROM query_logs
+		WHERE queried_at >= ? AND start_node != '' AND end_node != ''
+		GROUP BY node_range ORDER BY cnt DESC LIMIT 10`, startTime)
+	if err != nil {
+		return nil, fmt.Errorf("查询节次分布失败: %w", err)
+	}
+	defer rows.Close()
+
+	var items []model.NodeDistItem
+	for rows.Next() {
+		var item model.NodeDistItem
+		if err := rows.Scan(&item.Node, &item.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []model.NodeDistItem{}
+	}
+	return items, nil
+}
+
+// getDashboardResultStats 获取查询结果统计
+func (s *StatsService) getDashboardResultStats(startTime string) (model.ResultStatsData, error) {
+	var r model.ResultStatsData
+
+	// 基础统计
+	err := s.db.QueryRow(`
+		SELECT COALESCE(AVG(result_count), 0), COALESCE(MAX(result_count), 0),
+			   COALESCE(MIN(CASE WHEN result_count > 0 THEN result_count END), 0),
+			   SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END),
+			   SUM(CASE WHEN result_count > 0 THEN 1 ELSE 0 END)
+		FROM query_logs WHERE queried_at >= ?`, startTime,
+	).Scan(&r.AvgCount, &r.MaxCount, &r.MinCount, &r.ZeroCount, &r.NonZeroCount)
+	if err != nil {
+		return r, fmt.Errorf("查询结果统计失败: %w", err)
+	}
+
+	// 区间分布
+	type distRange struct {
+		label string
+		min   int
+		max   int
+	}
+	ranges := []distRange{
+		{"0", 0, 0},
+		{"1-5", 1, 5},
+		{"6-10", 6, 10},
+		{"11-20", 11, 20},
+		{"21-50", 21, 50},
+		{"50+", 51, 999999},
+	}
+
+	for _, dr := range ranges {
+		var count int
+		err := s.db.QueryRow(`
+			SELECT COUNT(*) FROM query_logs
+			WHERE queried_at >= ? AND result_count >= ? AND result_count <= ?`,
+			startTime, dr.min, dr.max,
+		).Scan(&count)
+		if err != nil {
+			return r, fmt.Errorf("查询结果区间分布失败: %w", err)
+		}
+		r.Distribution = append(r.Distribution, model.ResultDistItem{Range: dr.label, Count: count})
+	}
+
+	return r, nil
+}
+
+// getDashboardHourlyDist 获取每小时查询分布
+func (s *StatsService) getDashboardHourlyDist(startTime string) ([]model.HourlyDistItem, error) {
+	rows, err := s.db.Query(`
+		SELECT CAST(strftime('%H', queried_at) AS INTEGER) AS hour, COUNT(*) AS cnt
+		FROM query_logs WHERE queried_at >= ?
+		GROUP BY hour ORDER BY hour`, startTime)
+	if err != nil {
+		return nil, fmt.Errorf("查询每小时分布失败: %w", err)
+	}
+	defer rows.Close()
+
+	hourMap := make(map[int]int)
+	for rows.Next() {
+		var hour, count int
+		if err := rows.Scan(&hour, &count); err != nil {
+			return nil, err
+		}
+		hourMap[hour] = count
+	}
+
+	// 填充 0-23 小时
+	items := make([]model.HourlyDistItem, 24)
+	for h := 0; h < 24; h++ {
+		items[h] = model.HourlyDistItem{Hour: h, Count: hourMap[h]}
+	}
+	return items, nil
+}
+
 // Close 关闭数据库连接
 func (s *StatsService) Close() error {
 	return s.db.Close()

@@ -144,3 +144,25 @@ func (h *Handler) GetTopBuildings(c *gin.Context) {
 
 	c.JSON(http.StatusOK, &model.TopQueriesResponse{Queries: queries})
 }
+
+// GetDashboard 获取数据大屏综合统计数据
+func (h *Handler) GetDashboard(c *gin.Context) {
+	if h.statsService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "统计服务未初始化"})
+		return
+	}
+
+	timeRange := c.DefaultQuery("range", "today")
+	if timeRange != "today" && timeRange != "week" && timeRange != "month" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的时间范围，可选: today, week, month"})
+		return
+	}
+
+	data, err := h.statsService.GetDashboardData(timeRange)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取大屏数据失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
+}

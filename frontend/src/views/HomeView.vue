@@ -138,6 +138,52 @@ import StatsCard from '@/components/StatsCard.vue'
             </div>
           </div>
         </RouterLink>
+
+        <!-- Dashboard Data Screen Card -->
+        <RouterLink
+          to="/dashboard"
+          class="block clay-card p-6 sm:p-8"
+        >
+          <div class="relative z-10 flex items-center space-x-4">
+            <div
+              class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style="
+                background: linear-gradient(135deg, #93C5FD 0%, #3B82F6 100%);
+                box-shadow:
+                  8px 8px 16px rgba(59, 130, 246, 0.25),
+                  -4px -4px 8px rgba(255, 255, 255, 0.3),
+                  inset 2px 2px 4px rgba(255, 255, 255, 0.4),
+                  inset -2px -2px 4px rgba(0, 0, 0, 0.05);
+              "
+            >
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-clay-foreground" style="font-family: 'Nunito', sans-serif;">数据大屏</h3>
+              <p class="text-sm text-clay-muted mt-1 leading-relaxed font-medium">查看详细的查询统计与趋势分析</p>
+            </div>
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style="
+                background: rgba(255, 255, 255, 0.6);
+                box-shadow:
+                  4px 4px 8px rgba(136, 79, 34, 0.06),
+                  -3px -3px 6px rgba(255, 255, 255, 0.8);
+              "
+            >
+              <svg class="w-4 h-4 text-clay-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </RouterLink>
       </div>
 
       <QRCodeCard />

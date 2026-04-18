@@ -35,6 +35,11 @@ export async function getTopBuildings() {
   return data
 }
 
+export async function getDashboard(range = 'today') {
+  const { data } = await api.get('/api/v1/dashboard', { params: { range } })
+  return data
+}
+
 export function getErrorMessage(error, fallback = '请求失败，请稍后重试') {
   return error?.response?.data?.error || fallback
 }
