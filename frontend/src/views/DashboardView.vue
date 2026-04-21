@@ -92,14 +92,35 @@ function baseTooltip() {
   }
 }
 
+// 确保 ECharts 实例绑定到当前 DOM。
+// 切换时间范围时，loading 状态会导致图表容器被 v-if 卸载重挂，
+// 原实例仍持有已分离的 DOM 引用，setOption 将无法显示。
+// 此处检测到不一致即销毁重建。
+function ensureChart(instanceRef, domRef) {
+  if (!domRef.value) {
+    if (instanceRef.value) {
+      instanceRef.value.dispose()
+      instanceRef.value = null
+    }
+    return null
+  }
+  if (instanceRef.value && instanceRef.value.getDom() !== domRef.value) {
+    instanceRef.value.dispose()
+    instanceRef.value = null
+  }
+  if (!instanceRef.value) {
+    instanceRef.value = echarts.init(domRef.value)
+  }
+  return instanceRef.value
+}
+
 // ---- 渲染图表 ----
 function renderTrendChart() {
-  if (!trendChartRef.value || !data.value?.trend) return
-  if (!trendChart.value) {
-    trendChart.value = echarts.init(trendChartRef.value)
-  }
+  if (!data.value?.trend) return
+  const chart = ensureChart(trendChart, trendChartRef)
+  if (!chart) return
   const trend = data.value.trend
-  trendChart.value.setOption({
+  chart.setOption({
     tooltip: { ...baseTooltip(), trigger: 'axis' },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
     xAxis: {
@@ -140,12 +161,11 @@ function renderTrendChart() {
 }
 
 function renderKeywordChart() {
-  if (!keywordChartRef.value || !data.value?.top_keywords) return
-  if (!keywordChart.value) {
-    keywordChart.value = echarts.init(keywordChartRef.value)
-  }
+  if (!data.value?.top_keywords) return
+  const chart = ensureChart(keywordChart, keywordChartRef)
+  if (!chart) return
   const kw = data.value.top_keywords.slice().reverse()
-  keywordChart.value.setOption({
+  chart.setOption({
     tooltip: { ...baseTooltip(), trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 100, right: 30, top: 10, bottom: 20 },
     xAxis: {
@@ -194,17 +214,16 @@ function renderKeywordChart() {
 }
 
 function renderNodeChart() {
-  if (!nodeChartRef.value || !data.value?.node_dist) return
-  if (!nodeChart.value) {
-    nodeChart.value = echarts.init(nodeChartRef.value)
-  }
+  if (!data.value?.node_dist) return
+  const chart = ensureChart(nodeChart, nodeChartRef)
+  if (!chart) return
   const nd = data.value.node_dist
   const nodeLabels = {
     '01-02': '1-2节', '03-04': '3-4节', '05-06': '5-6节',
     '07-08': '7-8节', '09-10': '9-10节', '09-11': '9-11节',
     '01-04': '1-4节', '05-08': '5-8节', '01-11': '全天',
   }
-  nodeChart.value.setOption({
+  chart.setOption({
     tooltip: {
       ...baseTooltip(),
       trigger: 'item',
@@ -242,12 +261,11 @@ function renderNodeChart() {
 }
 
 function renderResultChart() {
-  if (!resultChartRef.value || !data.value?.result_stats) return
-  if (!resultChart.value) {
-    resultChart.value = echarts.init(resultChartRef.value)
-  }
+  if (!data.value?.result_stats) return
+  const chart = ensureChart(resultChart, resultChartRef)
+  if (!chart) return
   const dist = data.value.result_stats.distribution || []
-  resultChart.value.setOption({
+  chart.setOption({
     tooltip: { ...baseTooltip(), trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
     xAxis: {
@@ -290,13 +308,12 @@ function renderResultChart() {
 }
 
 function renderHourlyChart() {
-  if (!hourlyChartRef.value || !data.value?.hourly_dist) return
-  if (!hourlyChart.value) {
-    hourlyChart.value = echarts.init(hourlyChartRef.value)
-  }
+  if (!data.value?.hourly_dist) return
+  const chart = ensureChart(hourlyChart, hourlyChartRef)
+  if (!chart) return
   const hd = data.value.hourly_dist
   const maxCount = Math.max(...hd.map((h) => h.count), 1)
-  hourlyChart.value.setOption({
+  chart.setOption({
     tooltip: {
       ...baseTooltip(),
       trigger: 'axis',
