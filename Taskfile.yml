@@ -9,20 +9,8 @@ vars:
   TARGET_ARCH: amd64
   # 编译产物名称
   BINARY_NAME: "{{.PROJECT_NAME}}-{{.TARGET_OS}}-{{.TARGET_ARCH}}"
-  # 服务器配置
-  SERVER: mylinux
-  PORT: 22
-  SSH_USER: root
-  REMOTE_PATH: /root/easy-qfnu-empty-classrooms
+  # Supervisor 进程名
   SUPERVISOR_PROGRAM: "easy-qfnu-empty-classrooms:easy-qfnu-empty-classrooms_00"
-  # 手动指定 SSH 密钥路径，留空则由 SSH 自动尝试 ~/.ssh/ 下所有私钥
-  IDENTITY_FILE: ""
-  # 构建 SSH 密钥参数：指定了 IDENTITY_FILE 则用 -i，否则留空让 SSH 自动选择
-  SSH_IDENTITY_FLAG:
-    sh: |
-      if [ -n "{{.IDENTITY_FILE}}" ] && [ -f "{{.IDENTITY_FILE}}" ]; then
-        echo "-i {{.IDENTITY_FILE}}"
-      fi
 
 tasks:
   install:
@@ -46,13 +34,10 @@ tasks:
       - npm install
 
   default:
-    desc: 完整部署流程 (构建前端 -> 编译 -> 上传 -> 重启 -> 清理)
+    desc: 显示使用说明
     cmds:
-      - task: build-frontend
-      - task: compile
-      - task: upload
-      - task: restart
-      - task: clean
+      - echo "请使用 'task deploy' 并传入必要参数，示例："
+      - echo "  task deploy -- --host 服务器地址 --port 22 --user 用户名 --path /目标目录"
 
   build-frontend:
     desc: 构建前端产物
@@ -74,33 +59,72 @@ tasks:
     generates:
       - "{{.BINARY_NAME}}"
 
-  upload:
-    desc: 停止远程服务并上传编译产物
+  deploy:
+    desc: "完整部署，示例: task deploy -- --host 1.2.3.4 --port 22 --user root --path /opt/app"
     cmds:
-      - echo "[-] 停止远程服务..."
-      - ssh {{.SSH_IDENTITY_FLAG}} -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "supervisorctl stop {{.SUPERVISOR_PROGRAM}}"
-      - ssh {{.SSH_IDENTITY_FLAG}} -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "mkdir -p {{.REMOTE_PATH}}"
-      - scp {{.SSH_IDENTITY_FLAG}} -P {{.PORT}} -o StrictHostKeyChecking=no {{.BINARY_NAME}} {{.SSH_USER}}@{{.SERVER}}:{{.REMOTE_PATH}}/
-      - ssh {{.SSH_IDENTITY_FLAG}} -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "chmod +x {{.REMOTE_PATH}}/{{.BINARY_NAME}}"
-      - echo "[+] 文件上传成功!"
+      - task: build-frontend
+      - task: compile
+      - task: deploy-remote
 
-  restart:
-    desc: 启动远程服务
+  deploy-remote:
+    desc: 解析参数并执行远程部署 (上传 -> 重启 -> 清理)
     cmds:
-      - echo "[-] 启动远程服务..."
-      - ssh {{.SSH_IDENTITY_FLAG}} -p {{.PORT}} -o StrictHostKeyChecking=no {{.SSH_USER}}@{{.SERVER}} "supervisorctl start {{.SUPERVISOR_PROGRAM}}"
-      - echo "[+] 远程服务已启动!"
+      - |
+        # 解析 CLI 参数
+        DEPLOY_HOST=""
+        DEPLOY_PORT="22"
+        DEPLOY_USER=""
+        DEPLOY_PATH=""
+
+        args=({{.CLI_ARGS}})
+        i=0
+        while [ $i -lt ${#args[@]} ]; do
+          case "${args[$i]}" in
+            --host)  i=$((i+1)); DEPLOY_HOST="${args[$i]}" ;;
+            --port)  i=$((i+1)); DEPLOY_PORT="${args[$i]}" ;;
+            --user)  i=$((i+1)); DEPLOY_USER="${args[$i]}" ;;
+            --path)  i=$((i+1)); DEPLOY_PATH="${args[$i]}" ;;
+            *)       echo "[!] 未知参数: ${args[$i]}"; exit 1 ;;
+          esac
+          i=$((i+1))
+        done
+
+        # 校验必填参数
+        if [ -z "$DEPLOY_HOST" ]; then echo "[!] 缺少 --host 参数"; exit 1; fi
+        if [ -z "$DEPLOY_USER" ]; then echo "[!] 缺少 --user 参数"; exit 1; fi
+        if [ -z "$DEPLOY_PATH" ]; then echo "[!] 缺少 --path 参数"; exit 1; fi
+
+        SSH_CMD="ssh -p $DEPLOY_PORT -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST}"
+        BINARY_NAME="{{.BINARY_NAME}}"
+        SUPERVISOR_PROGRAM="{{.SUPERVISOR_PROGRAM}}"
+
+        echo "========================================="
+        echo "  部署目标: ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PORT}"
+        echo "  远程路径: ${DEPLOY_PATH}"
+        echo "========================================="
+
+        echo "[-] 停止远程服务..."
+        $SSH_CMD "supervisorctl stop $SUPERVISOR_PROGRAM"
+
+        echo "[-] 创建远程目录..."
+        $SSH_CMD "mkdir -p $DEPLOY_PATH"
+
+        echo "[-] 上传编译产物..."
+        scp -P $DEPLOY_PORT -o StrictHostKeyChecking=no "$BINARY_NAME" "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+
+        echo "[-] 设置执行权限..."
+        $SSH_CMD "chmod +x ${DEPLOY_PATH}/${BINARY_NAME}"
+
+        echo "[-] 启动远程服务..."
+        $SSH_CMD "supervisorctl start $SUPERVISOR_PROGRAM"
+
+        echo "[+] 部署完成!"
+
+        echo "[-] 清理本地构建产物..."
+        rm -f "$BINARY_NAME"
+        echo "[+] 清理完成!"
 
   clean:
     desc: 清理本地构建产物
     cmds:
       - rm -f {{.BINARY_NAME}}
-
-  deploy:
-    desc: 完整部署 (全平台通用)
-    cmds:
-      - task: build-frontend
-      - task: compile
-      - task: upload
-      - task: restart
-      - task: clean
