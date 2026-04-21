@@ -24,5 +24,26 @@ export default defineConfig({
     outDir: '../web',
     assetsDir: 'assets',
     emptyOutDir: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('echarts')) {
+              return 'vendor-echarts'
+            }
+            if (id.includes('vue-echarts')) {
+              return 'vendor-echarts'
+            }
+            if (id.includes('vue') || id.includes('vue-router')) {
+              return 'vendor-vue'
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios'
+            }
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 })

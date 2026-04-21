@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
-import EmptyClassroomView from '@/views/EmptyClassroomView.vue'
-import FullDayStatusView from '@/views/FullDayStatusView.vue'
-import DashboardView from '@/views/DashboardView.vue'
+
+const HomeView = () => import('@/views/HomeView.vue')
+const EmptyClassroomView = () => import('@/views/EmptyClassroomView.vue')
+const FullDayStatusView = () => import('@/views/FullDayStatusView.vue')
+const DashboardView = () => import('@/views/DashboardView.vue')
 
 const router = createRouter({
   history: createWebHistory(),
