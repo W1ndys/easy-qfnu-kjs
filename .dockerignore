@@ -12,4 +12,3 @@ frontend/dist
 *.zip
 *.log
 README.md
-deploy.ps1

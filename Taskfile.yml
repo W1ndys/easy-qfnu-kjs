@@ -36,8 +36,9 @@ tasks:
   default:
     desc: 显示使用说明
     cmds:
-      - echo "请使用 'task deploy' 并传入必要参数，示例："
-      - echo "  task deploy -- --host 服务器地址 --port 22 --user 用户名 --path /目标目录"
+      - echo "请使用 'task deploy' 并传入部署参数，示例："
+      - echo "  task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app"
+      - echo "PORT 可省略（默认 22），HOST/USER/DIR 必填。"
 
   build-frontend:
     desc: 构建前端产物
@@ -60,60 +61,42 @@ tasks:
       - "{{.BINARY_NAME}}"
 
   deploy:
-    desc: "完整部署，示例: task deploy -- --host 1.2.3.4 --port 22 --user root --path /opt/app"
+    desc: "完整部署，示例: task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app"
+    requires:
+      vars: [HOST, USER, DIR]
     cmds:
       - task: build-frontend
       - task: compile
       - task: deploy-remote
 
   deploy-remote:
-    desc: 解析参数并执行远程部署 (上传 -> 重启 -> 清理)
+    desc: "执行远程部署 (上传 -> 重启 -> 清理)，需变量: HOST USER DIR [PORT]"
+    requires:
+      vars: [HOST, USER, DIR]
+    vars:
+      PORT: '{{.PORT | default "22"}}'
     cmds:
       - |
-        # 解析 CLI 参数
-        DEPLOY_HOST=""
-        DEPLOY_PORT="22"
-        DEPLOY_USER=""
-        DEPLOY_PATH=""
-
-        args=({{.CLI_ARGS}})
-        i=0
-        while [ $i -lt ${#args[@]} ]; do
-          case "${args[$i]}" in
-            --host)  i=$((i+1)); DEPLOY_HOST="${args[$i]}" ;;
-            --port)  i=$((i+1)); DEPLOY_PORT="${args[$i]}" ;;
-            --user)  i=$((i+1)); DEPLOY_USER="${args[$i]}" ;;
-            --path)  i=$((i+1)); DEPLOY_PATH="${args[$i]}" ;;
-            *)       echo "[!] 未知参数: ${args[$i]}"; exit 1 ;;
-          esac
-          i=$((i+1))
-        done
-
-        # 校验必填参数
-        if [ -z "$DEPLOY_HOST" ]; then echo "[!] 缺少 --host 参数"; exit 1; fi
-        if [ -z "$DEPLOY_USER" ]; then echo "[!] 缺少 --user 参数"; exit 1; fi
-        if [ -z "$DEPLOY_PATH" ]; then echo "[!] 缺少 --path 参数"; exit 1; fi
-
-        SSH_CMD="ssh -p $DEPLOY_PORT -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST}"
+        SSH_CMD="ssh -p {{.PORT}} {{.USER}}@{{.HOST}}"
         BINARY_NAME="{{.BINARY_NAME}}"
         SUPERVISOR_PROGRAM="{{.SUPERVISOR_PROGRAM}}"
 
         echo "========================================="
-        echo "  部署目标: ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PORT}"
-        echo "  远程路径: ${DEPLOY_PATH}"
+        echo "  部署目标: {{.USER}}@{{.HOST}}:{{.PORT}}"
+        echo "  远程路径: {{.DIR}}"
         echo "========================================="
 
         echo "[-] 停止远程服务..."
         $SSH_CMD "supervisorctl stop $SUPERVISOR_PROGRAM"
 
         echo "[-] 创建远程目录..."
-        $SSH_CMD "mkdir -p $DEPLOY_PATH"
+        $SSH_CMD "mkdir -p {{.DIR}}"
 
         echo "[-] 上传编译产物..."
-        scp -P $DEPLOY_PORT -o StrictHostKeyChecking=no "$BINARY_NAME" "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+        scp -P {{.PORT}} "$BINARY_NAME" "{{.USER}}@{{.HOST}}:{{.DIR}}/"
 
         echo "[-] 设置执行权限..."
-        $SSH_CMD "chmod +x ${DEPLOY_PATH}/${BINARY_NAME}"
+        $SSH_CMD "chmod +x {{.DIR}}/${BINARY_NAME}"
 
         echo "[-] 启动远程服务..."
         $SSH_CMD "supervisorctl start $SUPERVISOR_PROGRAM"
