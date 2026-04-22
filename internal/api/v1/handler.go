@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 
 	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/model"
@@ -15,6 +17,15 @@ type Handler struct {
 
 func NewHandler(cs *service.ClassroomService, ss *service.StatsService) *Handler {
 	return &Handler{classroomService: cs, statsService: ss}
+}
+
+// hashUA 对 User-Agent 做 SHA256 并返回前 16 个十六进制字符 (与 middleware.RateLimiter 的哈希策略一致)
+func hashUA(ua string) string {
+	if ua == "" {
+		return ""
+	}
+	h := sha256.Sum256([]byte(ua))
+	return hex.EncodeToString(h[:8])
 }
 
 // GetStatus 返回系统状态，包括是否在教学周历内
@@ -71,6 +82,8 @@ func (h *Handler) QueryClassrooms(c *gin.Context) {
 			StartNode:   req.StartNode,
 			EndNode:     req.EndNode,
 			ResultCount: resultCount,
+			IP:          c.ClientIP(),
+			UAHash:      hashUA(c.GetHeader("User-Agent")),
 		})
 	}
 
@@ -103,6 +116,8 @@ func (h *Handler) QueryFullDayStatus(c *gin.Context) {
 			Keyword:     req.BuildingName,
 			DateOffset:  req.DateOffset,
 			ResultCount: resultCount,
+			IP:          c.ClientIP(),
+			UAHash:      hashUA(c.GetHeader("User-Agent")),
 		})
 	}
 

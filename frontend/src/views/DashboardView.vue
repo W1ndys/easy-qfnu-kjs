@@ -507,7 +507,7 @@ const resultRate = computed(() => {
               数据总览
               <span class="text-xs font-medium text-clay-muted ml-2">{{ timeRangeLabel }}</span>
             </h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <!-- 总查询 -->
               <div
                 class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
@@ -520,6 +520,34 @@ const resultRate = computed(() => {
                   {{ overview.total_count || 0 }}
                 </div>
                 <div class="text-xs text-clay-muted mt-1 font-medium">总查询次数</div>
+              </div>
+
+              <!-- 独立用户 (UV) -->
+              <div
+                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
+                style="
+                  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.15) 100%);
+                  box-shadow: 8px 8px 16px rgba(139,92,246,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(139,92,246,0.04);
+                "
+              >
+                <div class="text-2xl sm:text-3xl font-black text-violet-600 font-heading">
+                  {{ overview.unique_visitors || 0 }}
+                </div>
+                <div class="text-xs text-clay-muted mt-1 font-medium">独立用户(UV)</div>
+              </div>
+
+              <!-- 独立 IP -->
+              <div
+                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
+                style="
+                  background: linear-gradient(135deg, rgba(244,63,94,0.08) 0%, rgba(244,63,94,0.15) 100%);
+                  box-shadow: 8px 8px 16px rgba(244,63,94,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(244,63,94,0.04);
+                "
+              >
+                <div class="text-2xl sm:text-3xl font-black text-rose-600 font-heading">
+                  {{ overview.unique_ips || 0 }}
+                </div>
+                <div class="text-xs text-clay-muted mt-1 font-medium">独立 IP</div>
               </div>
 
               <!-- 独立搜索词 -->

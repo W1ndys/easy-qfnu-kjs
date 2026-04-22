@@ -72,6 +72,8 @@ type QueryRecord struct {
 	StartNode   string // 起始节次 (如 "01")，全天状态查询时为空
 	EndNode     string // 终止节次 (如 "11")，全天状态查询时为空
 	ResultCount int    // 搜索结果数量 (空教室数 / 教室数)
+	IP          string // 客户端 IP (用于 UV 统计)
+	UAHash      string // User-Agent 的 SHA256 前缀哈希 (用于 UV 统计)
 }
 
 // TopQueryItem 热门搜索组合条目
@@ -107,6 +109,8 @@ type DashboardResponse struct {
 type DashboardOverview struct {
 	TotalCount     int     `json:"total_count"`      // 时间段内总查询次数
 	UniqueKeywords int     `json:"unique_keywords"`  // 独立搜索词数
+	UniqueVisitors int     `json:"unique_visitors"`  // 独立用户数 (IP+UA 组合去重)
+	UniqueIPs      int     `json:"unique_ips"`       // 独立 IP 数
 	AvgResultCount float64 `json:"avg_result_count"` // 平均结果数量
 	MaxResultCount int     `json:"max_result_count"` // 单次最多结果数
 	TodayCount     int     `json:"today_count"`      // 今日查询次数

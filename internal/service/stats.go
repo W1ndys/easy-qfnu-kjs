@@ -88,6 +88,11 @@ func migrateSchema(db *sql.DB) error {
 		return migrateFromOldSchema(db)
 	}
 
+	// 新结构，增量添加 ip / ua_hash 列（v4 用户识别字段）
+	if err := addUserColumnsIfNotExist(db); err != nil {
+		return err
+	}
+
 	// 新表结构，检查索引
 	return createIndexesIfNotExist(db)
 }
@@ -102,15 +107,47 @@ func createNewTable(db *sql.DB) error {
 			start_node TEXT NOT NULL DEFAULT '',
 			end_node TEXT NOT NULL DEFAULT '',
 			result_count INTEGER NOT NULL DEFAULT 0,
+			ip TEXT NOT NULL DEFAULT '',
+			ua_hash TEXT NOT NULL DEFAULT '',
 			queried_at DATETIME DEFAULT (datetime('now', 'localtime'))
 		);
 		CREATE INDEX IF NOT EXISTS idx_queried_at ON query_logs(queried_at);
 		CREATE INDEX IF NOT EXISTS idx_keyword ON query_logs(keyword);
 		CREATE INDEX IF NOT EXISTS idx_combo ON query_logs(keyword, date_offset, start_node, end_node, result_count);
+		CREATE INDEX IF NOT EXISTS idx_ip_ua ON query_logs(ip, ua_hash);
 	`)
 	if err != nil {
 		return fmt.Errorf("创建表失败: %w", err)
 	}
+	return nil
+}
+
+// addUserColumnsIfNotExist 为已有 v3 表增量添加 ip / ua_hash 列 (v4 迁移)
+func addUserColumnsIfNotExist(db *sql.DB) error {
+	// 检测 ip 列
+	var hasIP int
+	if err := db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('query_logs') WHERE name='ip'").Scan(&hasIP); err != nil {
+		return fmt.Errorf("检测 ip 列失败: %w", err)
+	}
+	if hasIP == 0 {
+		if _, err := db.Exec("ALTER TABLE query_logs ADD COLUMN ip TEXT NOT NULL DEFAULT ''"); err != nil {
+			return fmt.Errorf("添加 ip 列失败: %w", err)
+		}
+		logger.Warn("已为 query_logs 添加 ip 列 (v4)")
+	}
+
+	// 检测 ua_hash 列
+	var hasUA int
+	if err := db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('query_logs') WHERE name='ua_hash'").Scan(&hasUA); err != nil {
+		return fmt.Errorf("检测 ua_hash 列失败: %w", err)
+	}
+	if hasUA == 0 {
+		if _, err := db.Exec("ALTER TABLE query_logs ADD COLUMN ua_hash TEXT NOT NULL DEFAULT ''"); err != nil {
+			return fmt.Errorf("添加 ua_hash 列失败: %w", err)
+		}
+		logger.Warn("已为 query_logs 添加 ua_hash 列 (v4)")
+	}
+
 	return nil
 }
 
@@ -146,10 +183,14 @@ func createIndexesIfNotExist(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("创建 combo 索引失败: %w", err)
 	}
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS idx_ip_ua ON query_logs(ip, ua_hash)")
+	if err != nil {
+		return fmt.Errorf("创建 ip_ua 索引失败: %w", err)
+	}
 	return nil
 }
 
-// RecordQuery 记录一次搜索查询（异步调用），包含完整的搜索参数和结果数量
+// RecordQuery 记录一次搜索查询（异步调用），包含完整的搜索参数、结果数量和用户识别信息
 func (s *StatsService) RecordQuery(record model.QueryRecord) {
 	if record.Keyword == "" {
 		return
@@ -160,8 +201,8 @@ func (s *StatsService) RecordQuery(record model.QueryRecord) {
 	defer s.mu.Unlock()
 
 	_, err := s.db.Exec(
-		"INSERT INTO query_logs (keyword, date_offset, start_node, end_node, result_count) VALUES (?, ?, ?, ?, ?)",
-		record.Keyword, record.DateOffset, record.StartNode, record.EndNode, record.ResultCount,
+		"INSERT INTO query_logs (keyword, date_offset, start_node, end_node, result_count, ip, ua_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		record.Keyword, record.DateOffset, record.StartNode, record.EndNode, record.ResultCount, record.IP, record.UAHash,
 	)
 	if err != nil {
 		logger.Warn("记录搜索查询失败: %v", err)
@@ -348,6 +389,16 @@ func (s *StatsService) getDashboardOverview(startTime string) (model.DashboardOv
 	).Scan(&o.TotalCount, &o.UniqueKeywords, &o.AvgResultCount, &o.MaxResultCount)
 	if err != nil {
 		return o, fmt.Errorf("查询总览数据失败: %w", err)
+	}
+
+	// 时间段内独立用户数 (IP+UA 组合去重) 和独立 IP 数
+	// 仅统计有 IP 记录的行 (兼容 v3 旧数据 ip 为空的情况)
+	err = s.db.QueryRow(`
+		SELECT COUNT(DISTINCT ip || '|' || ua_hash), COUNT(DISTINCT ip)
+		FROM query_logs WHERE queried_at >= ? AND ip != ''`, startTime,
+	).Scan(&o.UniqueVisitors, &o.UniqueIPs)
+	if err != nil {
+		return o, fmt.Errorf("查询独立用户数失败: %w", err)
 	}
 
 	// 今日
