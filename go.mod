@@ -1,4 +1,4 @@
-module github.com/W1ndys/easy-qfnu-empty-classrooms
+module github.com/W1ndys/easy-qfnu-kjs
 
 go 1.25.6
 

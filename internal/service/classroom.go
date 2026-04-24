@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/model"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/cas"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/model"
+	"github.com/W1ndys/easy-qfnu-kjs/pkg/cas"
 )
 
 type ClassroomService struct {

@@ -723,4 +723,4 @@ Content-Type: application/json
 
 **文档版本**: v1.0  
 **创建时间**: 2026-02-10  
-**适用项目**: easy-qfnu-empty-classrooms
+**适用项目**: easy-qfnu-kjs

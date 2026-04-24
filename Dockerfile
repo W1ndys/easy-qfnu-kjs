@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 COPY --from=frontend-builder /app/web ./web
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /easy-qfnu-empty-classrooms .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /easy-qfnu-kjs .
 
 FROM alpine:3.20
 WORKDIR /app
@@ -25,7 +25,7 @@ RUN adduser -D app \
     && mkdir -p /app/logs \
     && chown -R app:app /app
 
-COPY --from=go-builder /easy-qfnu-empty-classrooms /app/easy-qfnu-empty-classrooms
+COPY --from=go-builder /easy-qfnu-kjs /app/easy-qfnu-kjs
 
 USER app
 
@@ -34,4 +34,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/easy-qfnu-empty-classrooms"]
+ENTRYPOINT ["/app/easy-qfnu-kjs"]

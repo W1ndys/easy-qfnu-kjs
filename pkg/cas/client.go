@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/logger"
+	"github.com/W1ndys/easy-qfnu-kjs/pkg/logger"
 )
 
 const (

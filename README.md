@@ -13,8 +13,8 @@
 克隆仓库并下载依赖：
 
 ```bash
-git clone https://github.com/W1ndys/easy-qfnu-empty-classrooms.git
-cd easy-qfnu-empty-classrooms
+git clone https://github.com/W1ndys/easy-qfnu-kjs.git
+cd easy-qfnu-kjs
 go mod download
 ```
 
@@ -69,7 +69,7 @@ go run .
 在项目根目录下执行：
 
 ```bash
-# 默认编译，生成的文件名取决于目录名（如 easy-qfnu-empty-classrooms）
+# 默认编译，生成的文件名取决于目录名（如 easy-qfnu-kjs）
 go build -v .
 
 # 或者指定输出文件名

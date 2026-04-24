@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"net/http"
 
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/model"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/service"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/model"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
