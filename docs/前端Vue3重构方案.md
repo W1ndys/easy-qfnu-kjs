@@ -25,7 +25,7 @@
 
 - **后端 Go 代码**：`internal/`、`pkg/` 目录下的所有 Go 代码不做修改
 - **API 接口**：三个接口 `GET /api/v1/status`、`POST /api/v1/query`、`POST /api/v1/query-full-day` 保持不变
-- **部署方式**：交叉编译 + SSH 上传 + supervisord 管理的模式不变
+- **部署方式**：已迁移为 Docker 部署，前后端分容器运行，由 Traefik 统一接入
 - **品牌风格**：曲奇棕主题色 `#885021` 及整体 UI 风格保持一致
 
 ---
@@ -464,15 +464,14 @@ GET /*               → index.html（SPA fallback）
 ### 6.2 构建与部署
 
 ```bash
-# 1. 构建前端
-cd frontend && npm run build
-# 产物直接输出到 ../web/ 目录
+# 1. 构建并启动前后端容器
+docker compose up -d --build
 
-# 2. 构建 Go 二进制（embed 包含前端产物）
-go build -o app .
+# 2. 查看运行状态
+docker compose ps
 
-# 3. 部署（现有 deploy.ps1 流程不变）
-.\deploy.ps1
+# 3. 查看日志
+docker compose logs --tail=200
 ```
 
 ### 6.3 根目录 `package.json` 处理
@@ -517,7 +516,7 @@ web/assets/
 
 | 文件/目录 | 说明 |
 |-----------|------|
-| `web/index.html` | 已迁移到 `frontend/src/views/HomeView.vue` |
+| `web/index.html` | 现由前端容器静态提供，不再由 Go embed 提供 |
 | `web/empty-classroom.html` | 已迁移到 `frontend/src/views/EmptyClassroomView.vue` |
 | `web/full-day-status.html` | 已迁移到 `frontend/src/views/FullDayStatusView.vue` |
 | `web/css/` | CSS 构建已集成到 Vite，由 `frontend/src/assets/css/main.css` 替代 |
@@ -586,16 +585,16 @@ web/assets/
 4. 验证：通过 Vite 代理访问 Go 后端 API，功能正常
 
 ### 第四步：修改后端集成
-1. 修改 `web/assets.go` 的 embed 指令
-2. 修改 `main.go` 的路由配置（SPA fallback）
-3. 执行前端构建 `npm run build`
-4. 验证：直接运行 Go 二进制，前端页面和 API 都正常工作
+1. 移除 Go 对前端静态资源的 embed 依赖
+2. 保留后端 API 路由，由前端容器代理 `/api`
+3. 为前后端分别编写 Dockerfile
+4. 验证：通过 Docker 组网后，前端页面和 API 都正常工作
 
 ### 第五步：清理与收尾
 1. 删除旧的 HTML 文件和 CSS 文件
 2. 清理根目录的 Node.js 相关文件
 3. 更新 `.gitignore`
-4. 更新 `deploy.ps1`（在部署前先构建前端）
+4. 更新 Docker 与 Traefik 部署文档
 5. 更新项目 README
 
 ---
@@ -604,19 +603,15 @@ web/assets/
 
 ### 11.1 SPA History 模式的服务端配合
 
-Vue Router 使用 HTML5 History 模式时，用户直接访问 `/empty-classroom` 或刷新页面时，请求会到达 Go 后端。后端必须对所有未匹配的路由返回 `index.html`，否则会 404。这是最关键的后端修改点。
+Vue Router 使用 HTML5 History 模式时，前端容器内的 Nginx 必须将未知路由回退到 `index.html`，否则刷新 `/empty-classroom` 等页面时会 404。
 
-### 11.2 Go embed 路径
+### 11.2 前后端容器职责划分
 
-由于构建产物直接输出到 `web/` 目录（无 `dist/` 子目录），`embed.FS` 的使用方式与现有方案完全一致，无需 `fs.Sub()` 等额外处理。例如读取 `index.html` 直接使用 `StaticFS.ReadFile("index.html")` 即可。
-
-Vite 会将所有通过 `import` 引入的图片统一处理到 `assets/` 目录并自动添加内容哈希（如 `qrcode-a1b2c3d4.png`），Vue 组件中引用的路径会在构建时自动解析为正确的哈希文件名，无需手动管理图片路径。因此 `web/` 目录下不会有单独的 `images/` 目录。
-
-需要注意的是，`web/assets.go` 是手动维护的 Go 源文件，Vite 构建时不能覆盖它。建议在 Vite 配置中设置 `emptyOutDir: false`（不自动清理输出目录），改为在构建脚本中手动清理旧的构建产物（如 `web/assets/`、`web/index.html`），保留 `web/assets.go`。
+前端产物改为输出到 `frontend/dist/`，由前端容器静态托管；后端容器只提供 API，不再承担静态页面分发职责。
 
 ### 11.3 构建顺序
 
-部署时必须**先构建前端**（`npm run build`），再构建 Go 二进制。否则 `web/` 目录中缺少 `index.html` 和 `assets/` 会导致 Go 编译失败（embed 找不到声明的文件）。`deploy.ps1` 需要相应更新。
+部署时不再手动构建 Go 二进制和前端产物，而是统一通过 `docker compose up -d --build` 完成镜像构建与启动。
 
 ### 11.4 开发环境双服务器
 
@@ -624,4 +619,4 @@ Vite 会将所有通过 `import` 引入的图片统一处理到 `assets/` 目录
 
 ### 11.5 首次构建问题
 
-由于 `web/` 目录下的构建产物（`index.html`、`assets/`）是 gitignore 的，新克隆的项目需要先执行 `cd frontend && npm install && npm run build` 才能编译 Go 项目。建议在 README 中明确说明这一点。
+新克隆项目后，如需容器化部署，确保 Docker 环境可用并已创建 `traefik-public` 网络；如需本地开发，则分别安装 Go 和前端依赖即可。
