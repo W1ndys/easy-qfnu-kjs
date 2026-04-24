@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/W1ndys/easy-qfnu-empty-classrooms/internal/api/v1"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/middleware"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/service"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/cas"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/logger"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/web"
+	v1 "github.com/W1ndys/easy-qfnu-kjs/internal/api/v1"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/middleware"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/service"
+	"github.com/W1ndys/easy-qfnu-kjs/pkg/cas"
+	"github.com/W1ndys/easy-qfnu-kjs/pkg/logger"
+	"github.com/W1ndys/easy-qfnu-kjs/web"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )

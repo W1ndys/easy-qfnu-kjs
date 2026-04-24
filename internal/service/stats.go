@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/internal/model"
-	"github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/logger"
+	"github.com/W1ndys/easy-qfnu-kjs/internal/model"
+	"github.com/W1ndys/easy-qfnu-kjs/pkg/logger"
 
 	_ "modernc.org/sqlite"
 )

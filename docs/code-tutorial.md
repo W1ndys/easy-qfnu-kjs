@@ -50,7 +50,7 @@
 ## 2. 项目架构与目录结构
 
 ```
-easy-qfnu-empty-classrooms/
+easy-qfnu-kjs/
 ├── main.go                          # 程序入口点
 ├── go.mod                           # Go 模块定义文件
 ├── go.sum                           # 依赖校验文件
@@ -167,13 +167,13 @@ if err != nil {
 ### 4.1 创建 go.mod 文件
 
 ```bash
-go mod init github.com/W1ndys/easy-qfnu-empty-classrooms
+go mod init github.com/W1ndys/easy-qfnu-kjs
 ```
 
 这会创建 `go.mod` 文件：
 
 ```go
-module github.com/W1ndys/easy-qfnu-empty-classrooms
+module github.com/W1ndys/easy-qfnu-kjs
 
 go 1.25.6
 ```
@@ -674,7 +674,7 @@ import (
     "time"
 
     "github.com/PuerkitoBio/goquery"
-    "github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/auth"
+    "github.com/W1ndys/easy-qfnu-kjs/pkg/auth"
 )
 ```
 
@@ -1481,11 +1481,11 @@ import (
     "os"
     "time"
 
-    v1 "github.com/W1ndys/easy-qfnu-empty-classrooms/internal/api/v1"
-    "github.com/W1ndys/easy-qfnu-empty-classrooms/internal/service"
-    "github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/cas"
-    "github.com/W1ndys/easy-qfnu-empty-classrooms/pkg/logger"
-    "github.com/W1ndys/easy-qfnu-empty-classrooms/web"
+    v1 "github.com/W1ndys/easy-qfnu-kjs/internal/api/v1"
+    "github.com/W1ndys/easy-qfnu-kjs/internal/service"
+    "github.com/W1ndys/easy-qfnu-kjs/pkg/cas"
+    "github.com/W1ndys/easy-qfnu-kjs/pkg/logger"
+    "github.com/W1ndys/easy-qfnu-kjs/web"
     "github.com/gin-gonic/gin"
     "github.com/joho/godotenv"
 )

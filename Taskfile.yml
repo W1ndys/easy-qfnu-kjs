@@ -3,14 +3,14 @@ version: "3"
 
 vars:
   # 项目名称
-  PROJECT_NAME: easy-qfnu-empty-classrooms
+  PROJECT_NAME: easy-qfnu-kjs
   # 目标平台
   TARGET_OS: linux
   TARGET_ARCH: amd64
   # 编译产物名称
   BINARY_NAME: "{{.PROJECT_NAME}}-{{.TARGET_OS}}-{{.TARGET_ARCH}}"
   # Supervisor 进程名
-  SUPERVISOR_PROGRAM: "easy-qfnu-empty-classrooms:easy-qfnu-empty-classrooms_00"
+  SUPERVISOR_PROGRAM: "easy-qfnu-kjs:easy-qfnu-kjs_00"
 
 tasks:
   install:
