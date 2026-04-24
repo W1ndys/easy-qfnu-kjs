@@ -21,9 +21,9 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../web',
+    outDir: 'dist',
     assetsDir: 'assets',
-    emptyOutDir: false,
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks(id) {

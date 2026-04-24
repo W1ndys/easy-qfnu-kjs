@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"io/fs"
-	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	v1 "github.com/W1ndys/easy-qfnu-kjs/internal/api/v1"
@@ -13,7 +10,6 @@ import (
 	"github.com/W1ndys/easy-qfnu-kjs/internal/service"
 	"github.com/W1ndys/easy-qfnu-kjs/pkg/cas"
 	"github.com/W1ndys/easy-qfnu-kjs/pkg/logger"
-	"github.com/W1ndys/easy-qfnu-kjs/web"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -90,15 +86,6 @@ func main() {
 	r.RedirectTrailingSlash = false
 	r.RedirectFixedPath = false
 
-	serveIndex := func(c *gin.Context) {
-		content, err := web.StaticFS.ReadFile("index.html")
-		if err != nil {
-			c.String(http.StatusInternalServerError, "无法加载 index.html")
-			return
-		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", content)
-	}
-
 	// 搜索接口速率限制：基于 IP + User-Agent，5 秒内只能查询一次
 	searchRateLimiter := middleware.NewRateLimiter(5 * time.Second)
 
@@ -112,31 +99,6 @@ func main() {
 		api.GET("/top-buildings", apiHandler.GetTopBuildings)
 		api.GET("/dashboard", apiHandler.GetDashboard)
 	}
-
-	// 静态资源路由
-	assetsFS, err := fs.Sub(web.StaticFS, "assets")
-	if err != nil {
-		logger.Fatal("无法加载 assets 目录：%v", err)
-	}
-
-	r.StaticFS("/assets", http.FS(assetsFS))
-
-	// SPA 首页和回退路由
-	r.GET("/", serveIndex)
-	r.NoRoute(func(c *gin.Context) {
-		if c.Request.Method != http.MethodGet {
-			c.Status(http.StatusNotFound)
-			return
-		}
-
-		path := c.Request.URL.Path
-		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/images/") {
-			c.Status(http.StatusNotFound)
-			return
-		}
-
-		serveIndex(c)
-	})
 
 	// 启动
 	port := os.Getenv("PORT")
