@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,11 +23,22 @@ type StatsService struct {
 
 // NewStatsService 创建统计服务，打开或创建 SQLite 数据库
 func NewStatsService(dbPath string) (*StatsService, error) {
+	absPath, err := filepath.Abs(dbPath)
+	if err == nil {
+		dbPath = absPath
+	}
+
 	// 确保目录存在
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("创建数据目录失败: %w", err)
 	}
+
+	if err := verifyWritable(dir); err != nil {
+		return nil, fmt.Errorf("数据目录不可写: %w", err)
+	}
+
+	logger.Info("统计服务启动检查: db=%s dir=%s", dbPath, dir)
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -59,6 +71,33 @@ func NewStatsService(dbPath string) (*StatsService, error) {
 
 	logger.Info("统计服务已初始化，数据库路径: %s", dbPath)
 	return &StatsService{db: db}, nil
+}
+
+func verifyWritable(dir string) error {
+	info, err := os.Stat(dir)
+	if err != nil {
+		return fmt.Errorf("读取目录信息失败: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("%s 不是目录", dir)
+	}
+
+	testFile, err := os.CreateTemp(dir, ".write-check-*")
+	if err != nil {
+		return fmt.Errorf("目录=%s mode=%s, 创建临时文件失败: %w", dir, info.Mode().Perm(), err)
+	}
+
+	fileName := testFile.Name()
+	if closeErr := testFile.Close(); closeErr != nil {
+		logger.Warn("关闭统计目录写入检测文件失败: %v", closeErr)
+	}
+	if removeErr := os.Remove(fileName); removeErr != nil {
+		logger.Warn("清理统计目录写入检测文件失败: %v", removeErr)
+	}
+
+	logger.Info("统计目录写入检查通过: dir=%s mode=%s", dir, strings.TrimPrefix(info.Mode().String(), "d"))
+	return nil
 }
 
 // migrateSchema 检测并迁移表结构

@@ -14,17 +14,19 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /easy-qfn
 FROM alpine:3.20
 WORKDIR /app
 
-RUN adduser -D app \
+RUN apk add --no-cache su-exec \
+    && adduser -D app \
     && mkdir -p /app/data /app/logs \
     && chown -R app:app /app
 
 COPY --from=builder /easy-qfnu-kjs /app/easy-qfnu-kjs
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
-USER app
+RUN chmod +x /app/docker-entrypoint.sh
 
 ENV GIN_MODE=release
 ENV PORT=8080
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/easy-qfnu-kjs"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

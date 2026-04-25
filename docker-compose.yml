@@ -10,11 +10,11 @@ services:
         condition: service_healthy
     networks:
       - traefik-public
-      - app-net
+      - easy-qfnu-kjs-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
-      - "traefik.http.routers.easy-qfnu-kjs.rule=Host(`kjs.w1ndys.top`)"
+      - "traefik.http.routers.easy-qfnu-kjs.rule=Host(`kjs.easy-qfnu.top`)"
       - "traefik.http.routers.easy-qfnu-kjs.entrypoints=websecure"
       - "traefik.http.routers.easy-qfnu-kjs.tls.certresolver=leresolver"
       - "traefik.http.services.easy-qfnu-kjs.loadbalancer.server.port=80"
@@ -36,13 +36,14 @@ services:
     environment:
       PORT: 8080
       GIN_MODE: release
+      STATS_DB_PATH: /app/data/stats.db
     networks:
-      - app-net
+      - easy-qfnu-kjs-net
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/v1/status"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/status"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -51,5 +52,5 @@ services:
 networks:
   traefik-public:
     external: true
-  app-net:
+  easy-qfnu-kjs-net:
     driver: bridge

@@ -85,6 +85,15 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 当前部署方式全面迁移到 Docker 运行，不再保留 `systemd` / `systemctl` 相关脚本、任务和示例
   - 前端健康检查优先使用 `curl -f http://127.0.0.1/index.html`，避免 Traefik 因容器误判不健康而返回 404
 
+### Docker 挂载目录权限约定
+- Date: 2026-04-25
+- Context: Agent 在执行统计数据库只读问题修复时发现
+- Category: 环境配置
+- Instructions:
+  - 后端容器以非 root 用户 `app` 运行，但 `./data`、`./logs` 由宿主机 bind mount 后可能变成 root 拥有
+  - 启动入口需要先修正 `/app/data` 与 `/app/logs` 的属主，再以 `app` 身份启动应用，避免 SQLite 报 `attempt to write a readonly database`
+  - 统计数据库路径支持通过环境变量 `STATS_DB_PATH` 覆盖，默认仍为 `data/stats.db`
+
 ### Git 与回复偏好
 - Date: 2026-04-25
 - Context: 用户在说明后续协作与提交规范时明确指出
