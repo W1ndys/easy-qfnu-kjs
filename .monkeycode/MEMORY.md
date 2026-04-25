@@ -79,6 +79,7 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - Instructions:
   - 需要增强 `Taskfile.yml` 以承载开发运维任务，并统一设置 `silent: true`
   - `task deploy` 需支持通过 CLI 变量传入 `HOST`、`PORT`、`USER`、`DIR` 等远程部署参数
+  - 运维任务中只保留 `task deploy`，不再保留 `prod-deploy` 别名
   - 当前部署方式全面迁移到 Docker 运行，不再保留 `systemd` / `systemctl` 相关脚本、任务和示例
 
 ### Git 与回复偏好
