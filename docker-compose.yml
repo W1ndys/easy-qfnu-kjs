@@ -1,20 +1,43 @@
-version: "3.8"
-
 services:
-  empty-classroom:
-    build: .
-    container_name: easy-qfnu-kjs
-    restart: always
-    env_file: .env
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: easy-qfnu-kjs-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - traefik-public
       - app-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.empty-classroom.rule=Host(`kjs.w1ndys.top`)"
-      - "traefik.http.routers.empty-classroom.entrypoints=websecure"
-      - "traefik.http.routers.empty-classroom.tls.certresolver=leresolver"
-      - "traefik.http.services.empty-classroom.loadbalancer.server.port=8080"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.easy-qfnu-kjs.rule=Host(`kjs.w1ndys.top`)"
+      - "traefik.http.routers.easy-qfnu-kjs.entrypoints=websecure"
+      - "traefik.http.routers.easy-qfnu-kjs.tls.certresolver=leresolver"
+      - "traefik.http.services.easy-qfnu-kjs.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: easy-qfnu-kjs-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 8080
+      GIN_MODE: release
+    networks:
+      - app-net
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -23,6 +46,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 
 networks:
   traefik-public:

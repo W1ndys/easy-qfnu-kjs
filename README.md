@@ -1,94 +1,105 @@
 # easy-qfnu-kjs
 
-曲阜师范大学 (QFNU) 统一身份认证 (CAS) 登录的 Go 语言实现。
+曲阜师范大学空教室查询系统，现已迁移为前后端分离的 Docker 部署架构。
 
-## 如何使用
+## 部署架构
 
-本项目提供了灵活的配置方式，支持命令行参数、环境变量和 `.env` 配置文件。
+- 前端使用 `Vite + Vue 3` 构建，并以 `Nginx` 容器提供静态页面
+- 后端使用 `Go + Gin` 提供 API 服务
+- 前后端分别通过 Docker 容器运行，并通过 `app-net` 内部网络通信
+- 对外入口由 `Traefik` 负责负载均衡、TLS 和反向代理
+- 不再使用旧的 `task deploy`、SSH 上传、二进制直传或进程守护部署方式
 
-### 1. 准备工作
+## 快速开始
 
-首先，确保你已经安装了 Go 语言环境。
-
-克隆仓库并下载依赖：
-
-```bash
-git clone https://github.com/W1ndys/easy-qfnu-kjs.git
-cd easy-qfnu-kjs
-go mod download
-```
-
-### 2. 运行方式
-
-你可以直接运行源码来测试登录功能。
-
-#### 方式一：命令行参数（推荐）
-
-直接通过 `-u` 指定账号，`-p` 指定密码：
+### 1. 准备环境变量
 
 ```bash
-go run . -u <你的学号> -p <你的密码>
+cp .env.example .env
 ```
 
-#### 方式二：.env 配置文件
+然后编辑 `.env`，填写真实账号信息。
 
-在项目根目录下创建一个名为 `.env` 的文件，填入以下内容：
-
-```env
-QFNU_USERNAME=你的学号
-QFNU_PASSWORD=你的密码
-PORT=8080
-GIN_MODE=release
-```
-
-**环境变量说明：**
+可用变量如下：
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `QFNU_USERNAME` 或 `QFNU_USER` | 学号 | 无 |
 | `QFNU_PASSWORD` 或 `QFNU_PASS` | 密码 | 无 |
-| `PORT` | 服务监听端口 | `8080` |
-| `GIN_MODE` | Gin 运行模式 (`debug`/`release`) | `debug` |
+| `PORT` | 后端容器监听端口 | `8080` |
+| `GIN_MODE` | Gin 运行模式 | `release` |
 
-然后直接运行，程序会自动读取配置：
-
-```bash
-go run .
-```
-
-#### 方式三：环境变量
-
-你也可以设置系统环境变量 `QFNU_USERNAME` 和 `QFNU_PASSWORD`，然后直接运行 `go run .`。
-
-## 如何编译
-
-如果你希望生成可执行文件以便分发或部署，可以使用以下命令进行编译。
-
-### 编译主程序
-
-在项目根目录下执行：
+### 2. 确保 Traefik 网络存在
 
 ```bash
-# 默认编译，生成的文件名取决于目录名（如 easy-qfnu-kjs）
-go build -v .
-
-# 或者指定输出文件名
-# Windows
-go build -o qfnu-login.exe .
-# Linux/macOS
-go build -o qfnu-login .
+docker network create traefik-public
 ```
 
-编译完成后，即可直接运行生成的可执行文件：
+如果你的环境已经有 Traefik 使用中的公共网络，可复用现有网络。
+
+### 3. 启动服务
 
 ```bash
-./qfnu-login -u <学号> -p <密码>
+docker compose up -d --build
 ```
 
-### 编译 Demo
+启动后：
 
-如果你想编译 `cmd/demo` 下的示例程序：
+- `frontend` 容器负责提供页面，并通过 Nginx 反向代理 `/api` 到 `backend:8080`
+- `backend` 容器仅加入内部网络，不直接暴露宿主机端口
+- `Traefik` 通过 `frontend` 容器标签接入对外流量
+
+### 4. 查看状态
 
 ```bash
-go build -v ./cmd/demo
+docker compose ps
+docker compose logs --tail=200
 ```
+
+## Docker 组件说明
+
+### `docker-compose.yml`
+
+- `frontend` 服务
+  - 基于 `frontend/Dockerfile` 构建
+  - 监听容器内 `80` 端口
+  - 接入 `traefik-public` 与 `app-net`
+  - 通过 Traefik label 暴露站点
+- `backend` 服务
+  - 基于根目录 `Dockerfile` 构建
+  - 监听容器内 `8080` 端口
+  - 只接入 `app-net`
+  - 挂载 `./data` 和 `./logs` 持久化数据
+
+### 前端反向代理
+
+前端容器内的 `Nginx` 配置位于 `frontend/nginx.conf`，会把 `/api/` 请求转发给 `backend:8080`，从而实现容器内网通信，避免浏览器直接访问后端容器。
+
+## 本地开发
+
+如果需要本地联调而不是走容器：
+
+```bash
+# 安装依赖
+task install
+
+# 终端 1：启动后端
+task backend-dev
+
+# 终端 2：启动前端
+task frontend-dev
+```
+
+此时前端开发服务器会通过 `frontend/vite.config.js` 中的代理，把 `/api` 请求转发到本地 `http://localhost:8080`。
+
+## Task 命令
+
+```bash
+task build
+task up
+task down
+task logs
+task ps
+```
+
+这些命令现在仅作为 Docker 工作流的简化入口，不再承担旧式远程部署职责。

@@ -2,19 +2,21 @@
 version: "3"
 
 vars:
-  # 项目名称
-  PROJECT_NAME: easy-qfnu-kjs
-  # 目标平台
-  TARGET_OS: linux
-  TARGET_ARCH: amd64
-  # 编译产物名称
-  BINARY_NAME: "{{.PROJECT_NAME}}-{{.TARGET_OS}}-{{.TARGET_ARCH}}"
-  # Supervisor 进程名
-  SUPERVISOR_PROGRAM: "easy-qfnu-kjs:easy-qfnu-kjs_00"
+  COMPOSE: docker compose
 
 tasks:
+  default:
+    desc: 显示 Docker 部署说明
+    cmds:
+      - printf "请使用 Docker 部署流程。\n"
+      - printf "常用命令：\n"
+      - printf "  task up      # 构建并启动前后端容器\n"
+      - printf "  task down    # 停止并移除容器\n"
+      - printf "  task logs    # 查看容器日志\n"
+      - printf "  task build   # 重新构建镜像\n"
+
   install:
-    desc: 安装所有依赖 (Go + npm)
+    desc: 安装本地开发依赖
     cmds:
       - task: install-go
       - task: install-frontend
@@ -27,87 +29,46 @@ tasks:
   install-frontend:
     desc: 安装前端依赖
     dir: frontend
-    preconditions:
-      - sh: test -d .
-        msg: "未找到 frontend 目录，无法安装前端依赖。"
     cmds:
       - npm install
 
-  default:
-    desc: 显示使用说明
+  build:
+    desc: 构建前后端 Docker 镜像
     cmds:
-      - echo "请使用 'task deploy' 并传入部署参数，示例："
-      - echo "  task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app"
-      - echo "PORT 可省略（默认 22），HOST/USER/DIR 必填。"
+      - '{{.COMPOSE}} build'
 
-  build-frontend:
-    desc: 构建前端产物
+  up:
+    desc: 构建并启动前后端容器
+    cmds:
+      - '{{.COMPOSE}} up -d --build'
+
+  down:
+    desc: 停止并移除容器
+    cmds:
+      - '{{.COMPOSE}} down'
+
+  logs:
+    desc: 查看容器日志
+    cmds:
+      - '{{.COMPOSE}} logs --tail=200'
+
+  ps:
+    desc: 查看容器状态
+    cmds:
+      - '{{.COMPOSE}} ps'
+
+  restart:
+    desc: 重启容器
+    cmds:
+      - '{{.COMPOSE}} restart'
+
+  frontend-dev:
+    desc: 启动前端本地开发服务器
     dir: frontend
-    preconditions:
-      - sh: test -d .
-        msg: "未找到 frontend 目录，无法执行前端构建。"
     cmds:
-      - npm run build
+      - npm run dev
 
-  compile:
-    desc: 交叉编译 Go 二进制文件 (Linux amd64)
-    env:
-      CGO_ENABLED: "0"
-      GOOS: "{{.TARGET_OS}}"
-      GOARCH: "{{.TARGET_ARCH}}"
+  backend-dev:
+    desc: 启动后端本地开发服务
     cmds:
-      - go build -ldflags "-s -w" -o {{.BINARY_NAME}} .
-    generates:
-      - "{{.BINARY_NAME}}"
-
-  deploy:
-    desc: "完整部署，示例: task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app"
-    requires:
-      vars: [HOST, USER, DIR]
-    cmds:
-      - task: build-frontend
-      - task: compile
-      - task: deploy-remote
-
-  deploy-remote:
-    desc: "执行远程部署 (上传 -> 重启 -> 清理)，需变量: HOST USER DIR [PORT]"
-    requires:
-      vars: [HOST, USER, DIR]
-    vars:
-      PORT: '{{.PORT | default "22"}}'
-    cmds:
-      - |
-        SSH_CMD="ssh -p {{.PORT}} {{.USER}}@{{.HOST}}"
-        BINARY_NAME="{{.BINARY_NAME}}"
-        SUPERVISOR_PROGRAM="{{.SUPERVISOR_PROGRAM}}"
-
-        echo "========================================="
-        echo "  部署目标: {{.USER}}@{{.HOST}}:{{.PORT}}"
-        echo "  远程路径: {{.DIR}}"
-        echo "========================================="
-
-        echo "[-] 停止远程服务..."
-        $SSH_CMD "supervisorctl stop $SUPERVISOR_PROGRAM"
-
-        echo "[-] 创建远程目录..."
-        $SSH_CMD "mkdir -p {{.DIR}}"
-
-        echo "[-] 上传编译产物..."
-        scp -P {{.PORT}} "$BINARY_NAME" "{{.USER}}@{{.HOST}}:{{.DIR}}/"
-
-        echo "[-] 设置执行权限..."
-        $SSH_CMD "chmod +x {{.DIR}}/${BINARY_NAME}"
-
-        echo "[-] 启动远程服务..."
-        $SSH_CMD "supervisorctl start $SUPERVISOR_PROGRAM"
-
-        echo "[+] 部署完成!"
-
-        echo "[-] 清理本地构建产物..."
-        rm -f "$BINARY_NAME"
-        echo "[+] 清理完成!"
-
-  clean:
-    desc: 清理本地构建产物
-    cmds:
-      - rm -f {{.BINARY_NAME}}
+      - go run .
