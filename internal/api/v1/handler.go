@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"strconv"
 
 	"github.com/W1ndys/easy-qfnu-kjs/internal/model"
 	"github.com/W1ndys/easy-qfnu-kjs/internal/service"
@@ -168,12 +169,21 @@ func (h *Handler) GetDashboard(c *gin.Context) {
 	}
 
 	timeRange := c.DefaultQuery("range", "today")
-	if timeRange != "today" && timeRange != "week" && timeRange != "month" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的时间范围，可选: today, week, month"})
+	days := 0
+	if timeRange != "today" && timeRange != "week" && timeRange != "month" && timeRange != "custom" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的时间范围，可选: today, week, month, custom"})
 		return
 	}
+	if timeRange == "custom" {
+		parsedDays, err := strconv.Atoi(c.DefaultQuery("days", ""))
+		if err != nil || parsedDays < 1 || parsedDays > 365 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "自定义天数必须是 1 到 365 之间的整数"})
+			return
+		}
+		days = parsedDays
+	}
 
-	data, err := h.statsService.GetDashboardData(timeRange)
+	data, err := h.statsService.GetDashboardData(timeRange, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取大屏数据失败"})
 		return

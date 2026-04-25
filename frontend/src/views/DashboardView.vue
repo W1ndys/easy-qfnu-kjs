@@ -41,6 +41,7 @@ const CHART_PALETTE = [
 
 // ---- 状态 ----
 const timeRange = ref('today')
+const customDays = ref(14)
 const loading = ref(true)
 const data = ref(null)
 const error = ref(null)
@@ -49,10 +50,13 @@ const timeRangeOptions = [
   { value: 'today', label: '今天' },
   { value: 'week', label: '最近7天' },
   { value: 'month', label: '最近30天' },
+  { value: 'custom', label: '自定义' },
 ]
 
 const timeRangeLabel = computed(() =>
-  timeRangeOptions.find((o) => o.value === timeRange.value)?.label || ''
+  timeRange.value === 'custom'
+    ? `最近${customDays.value}天`
+    : timeRangeOptions.find((o) => o.value === timeRange.value)?.label || ''
 )
 
 // ---- ECharts 实例引用 ----
@@ -73,7 +77,7 @@ async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    data.value = await getDashboard(timeRange.value)
+    data.value = await getDashboard(timeRange.value, customDays.value)
   } catch (e) {
     error.value = e?.response?.data?.error || '获取数据失败'
   } finally {
@@ -129,7 +133,7 @@ function renderTrendChart() {
       axisLabel: {
         color: COLORS.slate,
         fontSize: 11,
-        rotate: timeRange.value === 'month' ? 45 : 0,
+        rotate: timeRange.value === 'month' || timeRange.value === 'custom' ? 45 : 0,
       },
       axisLine: { lineStyle: { color: COLORS.cream } },
       axisTick: { show: false },
@@ -402,6 +406,12 @@ watch(timeRange, async () => {
   renderAllCharts()
 })
 
+watch(customDays, async () => {
+  if (timeRange.value !== 'custom') return
+  await fetchData()
+  renderAllCharts()
+})
+
 watch(data, () => {
   if (data.value) renderAllCharts()
 })
@@ -450,18 +460,34 @@ const overviewCards = computed(() => [
 
     <main class="relative z-10 mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
       <div class="clay-card p-4">
-        <div class="relative z-10 flex items-center justify-center rounded-xl bg-[#F3EFEB] p-1">
-          <button
-            v-for="opt in timeRangeOptions"
-            :key="opt.value"
-            @click="timeRange = opt.value"
-            class="min-h-10 flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition"
-            :class="timeRange === opt.value
-              ? 'bg-white text-primary shadow-sm'
-              : 'text-clay-muted hover:text-clay-foreground'"
-          >
-            {{ opt.label }}
-          </button>
+        <div class="relative z-10 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div class="flex flex-1 items-center justify-center rounded-xl bg-[#F3EFEB] p-1">
+            <button
+              v-for="opt in timeRangeOptions"
+              :key="opt.value"
+              @click="timeRange = opt.value"
+              class="min-h-10 flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition"
+              :class="timeRange === opt.value
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-clay-muted hover:text-clay-foreground'"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+
+          <label class="flex items-center justify-between gap-3 rounded-xl border border-subtle bg-white px-4 py-2.5 text-sm font-semibold text-clay-foreground lg:w-56">
+            <span>最近</span>
+            <input
+              v-model.number="customDays"
+              :disabled="timeRange !== 'custom'"
+              type="number"
+              min="1"
+              max="365"
+              class="w-20 rounded-lg border border-subtle bg-[#FDFBF8] px-3 py-1.5 text-center text-primary outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:bg-[#F3EFEB] disabled:text-clay-muted"
+              @focus="timeRange = 'custom'"
+            />
+            <span>天</span>
+          </label>
         </div>
       </div>
 

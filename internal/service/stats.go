@@ -350,7 +350,7 @@ func (s *StatsService) GetTopQueries(limit int) ([]model.TopQueryItem, error) {
 }
 
 // GetDashboardData 获取数据大屏综合统计数据
-func (s *StatsService) GetDashboardData(timeRange string) (*model.DashboardResponse, error) {
+func (s *StatsService) GetDashboardData(timeRange string, days int) (*model.DashboardResponse, error) {
 	now := time.Now()
 	var startTime string
 
@@ -361,6 +361,11 @@ func (s *StatsService) GetDashboardData(timeRange string) (*model.DashboardRespo
 		startTime = now.AddDate(0, 0, -6).Format("2006-01-02") + " 00:00:00"
 	case "month":
 		startTime = now.AddDate(0, 0, -29).Format("2006-01-02") + " 00:00:00"
+	case "custom":
+		if days < 1 {
+			days = 1
+		}
+		startTime = now.AddDate(0, 0, -(days-1)).Format("2006-01-02") + " 00:00:00"
 	default:
 		startTime = now.Format("2006-01-02") + " 00:00:00"
 	}
@@ -380,7 +385,7 @@ func (s *StatsService) GetDashboardData(timeRange string) (*model.DashboardRespo
 
 	go func() {
 		defer wg.Done()
-		resp.Trend, trendErr = s.getDashboardTrend(timeRange, startTime, now)
+		resp.Trend, trendErr = s.getDashboardTrend(timeRange, startTime, now, days)
 	}()
 
 	go func() {
@@ -466,7 +471,7 @@ func (s *StatsService) getDashboardOverview(startTime string) (model.DashboardOv
 }
 
 // getDashboardTrend 获取趋势数据
-func (s *StatsService) getDashboardTrend(timeRange, startTime string, now time.Time) ([]model.TrendPoint, error) {
+func (s *StatsService) getDashboardTrend(timeRange, startTime string, now time.Time, days int) ([]model.TrendPoint, error) {
 	var query string
 	var points []model.TrendPoint
 
@@ -548,6 +553,35 @@ func (s *StatsService) getDashboardTrend(timeRange, startTime string, now time.T
 		}
 		// 填充最近 30 天
 		for i := 29; i >= 0; i-- {
+			d := now.AddDate(0, 0, -i)
+			label := d.Format("01-02")
+			key := d.Format("2006-01-02")
+			points = append(points, model.TrendPoint{Label: label, Count: dayMap[key]})
+		}
+
+	case "custom":
+		if days < 1 {
+			days = 1
+		}
+		query = `SELECT strftime('%Y-%m-%d', queried_at) AS label, COUNT(*) AS cnt
+				 FROM query_logs WHERE queried_at >= ?
+				 GROUP BY label ORDER BY label`
+		rows, err := s.db.Query(query, startTime)
+		if err != nil {
+			return nil, fmt.Errorf("查询自定义范围趋势失败: %w", err)
+		}
+		defer rows.Close()
+
+		dayMap := make(map[string]int)
+		for rows.Next() {
+			var label string
+			var count int
+			if err := rows.Scan(&label, &count); err != nil {
+				return nil, err
+			}
+			dayMap[label] = count
+		}
+		for i := days - 1; i >= 0; i-- {
 			d := now.AddDate(0, 0, -i)
 			label := d.Format("01-02")
 			key := d.Format("2006-01-02")

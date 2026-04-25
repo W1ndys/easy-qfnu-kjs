@@ -92,7 +92,8 @@ type TopQueriesResponse struct {
 
 // DashboardRequest 数据大屏请求参数
 type DashboardRequest struct {
-	Range string `form:"range"` // 时间范围: today, week, month
+	Range string `form:"range"` // 时间范围: today, week, month, custom
+	Days  int    `form:"days"`  // 自定义最近天数，仅 range=custom 时生效
 }
 
 // DashboardResponse 数据大屏综合统计响应
