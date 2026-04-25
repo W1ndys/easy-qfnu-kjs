@@ -95,6 +95,8 @@ task frontend-dev
 ## Task 命令
 
 ```bash
+task env-init
+task install
 task build
 task up
 task down
@@ -102,4 +104,20 @@ task logs
 task ps
 ```
 
-这些命令现在仅作为 Docker 工作流的简化入口，不再承担旧式远程部署职责。
+这些命令用于本地开发和 Docker 工作流。
+
+## 运维部署
+
+`Taskfile.yml` 已增加开发运维相关任务，并统一设置为 `silent: true`。
+
+### 远程同步项目文件
+
+```bash
+task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app
+```
+
+该命令会通过 `rsync` 将项目文件同步到目标服务器目录，并自动为远端 `scripts/ops/*.sh` 添加执行权限。
+
+## 运维脚本
+
+- `scripts/ops/deploy.sh`：同步项目到远程目录

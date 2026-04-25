@@ -1,19 +1,36 @@
 # https://taskfile.dev
 version: "3"
 
+silent: true
+
 vars:
   COMPOSE: docker compose
+  PORT: '{{default "22" .PORT}}'
 
 tasks:
   default:
-    desc: 显示 Docker 部署说明
+    desc: 显示开发与运维命令
     cmds:
-      - printf "请使用 Docker 部署流程。\n"
-      - printf "常用命令：\n"
-      - printf "  task up      # 构建并启动前后端容器\n"
-      - printf "  task down    # 停止并移除容器\n"
-      - printf "  task logs    # 查看容器日志\n"
-      - printf "  task build   # 重新构建镜像\n"
+      - |
+        printf "开发命令:\n"
+        printf "  task env-init        初始化本地 .env\n"
+        printf "  task install         安装本地依赖\n"
+        printf "  task up              启动 Docker 服务\n"
+        printf "  task backend-dev     启动后端开发服务\n"
+        printf "  task frontend-dev    启动前端开发服务\n"
+        printf "\n运维命令:\n"
+        printf "  task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app\n"
+
+  env-init:
+    desc: 初始化本地环境变量文件
+    cmds:
+      - |
+        if [ -f .env ]; then
+          printf ".env already exists\n"
+        else
+          cp .env.example .env
+          printf "created .env from .env.example\n"
+        fi
 
   install:
     desc: 安装本地开发依赖
@@ -72,3 +89,10 @@ tasks:
     desc: 启动后端本地开发服务
     cmds:
       - go run .
+
+  deploy:
+    desc: 同步项目文件到目标服务器目录
+    requires:
+      vars: [HOST, USER, DIR]
+    cmds:
+      - ./scripts/ops/deploy.sh '{{.HOST}}' '{{.PORT}}' '{{.USER}}' '{{.DIR}}'
