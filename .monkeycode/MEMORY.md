@@ -78,6 +78,7 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - Context: 用户在补充开发运维能力时明确指出
 - Instructions:
   - 需要增强 `Taskfile.yml` 以承载开发运维任务，并统一设置 `silent: true`
+  - 国内镜像源应优先在 Docker 构建容器内配置，不修改宿主机上的 Go 与 npm 全局镜像设置
   - `task deploy` 需支持通过 CLI 变量传入 `HOST`、`PORT`、`USER`、`DIR` 等远程部署参数
   - 部署逻辑继续通过独立 `sh` 脚本实现，便于后续复用
   - 运维任务中只保留 `task deploy`，不再保留 `prod-deploy` 别名
