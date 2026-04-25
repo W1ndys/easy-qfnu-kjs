@@ -20,7 +20,6 @@ tasks:
         printf "  task frontend-dev    启动前端开发服务\n"
         printf "\n运维命令:\n"
         printf "  task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app\n"
-        printf "  task prod-deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app\n"
 
   env-init:
     desc: 初始化本地环境变量文件
@@ -97,15 +96,3 @@ tasks:
       vars: [HOST, USER, DIR]
     cmds:
       - ./scripts/ops/deploy.sh '{{.HOST}}' '{{.PORT}}' '{{.USER}}' '{{.DIR}}'
-
-  prod-deploy:
-    desc: 上传代码到生产服务器目录
-    requires:
-      vars: [HOST, USER, DIR]
-    cmds:
-      - task: deploy
-        vars:
-          HOST: '{{.HOST}}'
-          PORT: '{{.PORT}}'
-          USER: '{{.USER}}'
-          DIR: '{{.DIR}}'

@@ -118,14 +118,6 @@ task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app
 
 该命令会通过 `rsync` 将项目文件同步到目标服务器目录，并自动为远端 `scripts/ops/*.sh` 添加执行权限。
 
-### 一键部署到生产服务器
-
-```bash
-task prod-deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app
-```
-
-该命令是 `task deploy` 的别名，用于语义化表示生产环境的 Docker 部署上传流程。
-
 ## 运维脚本
 
 - `scripts/ops/deploy.sh`：同步项目到远程目录
