@@ -91,7 +91,7 @@ tasks:
       - go run .
 
   deploy:
-    desc: 同步项目文件到目标服务器目录
+    desc: 同步项目文件并重建远端容器
     requires:
       vars: [HOST, USER, DIR]
     cmds:
