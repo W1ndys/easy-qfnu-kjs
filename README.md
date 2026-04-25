@@ -20,10 +20,12 @@ cp .env.example .env
 
 然后编辑 `.env`，填写真实账号信息。
 
-首次执行 `task install` 时，会先自动把 Go 和 npm 的依赖源切换到国内镜像：
+Docker 构建阶段已内置 Go 和 npm 国内镜像配置：
 
 - Go: `https://goproxy.cn,direct`
 - npm: `https://registry.npmmirror.com`
+
+因此执行 `docker compose build`、`task build` 或 `task up` 时，会在容器构建阶段直接使用国内镜像安装依赖，不会改动宿主机上的全局配置。
 
 可用变量如下：
 
@@ -102,7 +104,6 @@ task frontend-dev
 ```bash
 task env-init
 task install
-task use-cn-mirrors
 task build
 task up
 task down

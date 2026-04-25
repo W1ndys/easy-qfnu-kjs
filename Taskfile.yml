@@ -35,14 +35,8 @@ tasks:
   install:
     desc: 安装本地开发依赖
     cmds:
-      - task: use-cn-mirrors
       - task: install-go
       - task: install-frontend
-
-  use-cn-mirrors:
-    desc: 配置 Go 与 npm 国内镜像
-    cmds:
-      - ./scripts/ops/use-cn-mirrors.sh
 
   install-go:
     desc: 安装 Go 依赖
