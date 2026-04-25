@@ -126,8 +126,10 @@ task ps
 task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app
 ```
 
-该命令会通过 `rsync` 将项目文件同步到目标服务器目录，并自动为远端 `scripts/ops/*.sh` 添加执行权限。
+该命令会通过 `rsync` 将项目文件同步到目标服务器目录，自动为远端 `scripts/ops/*.sh` 添加执行权限，并在上传完成后立即执行 `docker compose up -d --build` 重建并拉起容器。
+
+部署过程中会输出分阶段日志，包括远端目录准备、文件上传、容器重建、容器状态展示与健康检查。若某个服务未启动、健康检查失败或超时，脚本会自动输出对应服务的 `docker compose ps` 状态和最近 100 行日志，便于直接排查。
 
 ## 运维脚本
 
-- `scripts/ops/deploy.sh`：同步项目到远程目录
+- `scripts/ops/deploy.sh`：同步项目到远程目录并立即重建容器
