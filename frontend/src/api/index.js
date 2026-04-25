@@ -35,8 +35,10 @@ export async function getTopBuildings() {
   return data
 }
 
-export async function getDashboard(range = 'today') {
-  const { data } = await api.get('/api/v1/dashboard', { params: { range } })
+export async function getDashboard(range = 'today', days) {
+  const params = { range }
+  if (range === 'custom') params.days = days
+  const { data } = await api.get('/api/v1/dashboard', { params })
   return data
 }
 
