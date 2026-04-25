@@ -433,56 +433,38 @@ const resultRate = computed(() => {
   if (!rs || (rs.zero_count + rs.non_zero_count) === 0) return '--'
   return ((rs.non_zero_count / (rs.zero_count + rs.non_zero_count)) * 100).toFixed(1) + '%'
 })
+
+const overviewCards = computed(() => [
+  { label: '总查询次数', value: overview.value.total_count || 0, class: 'border-primary-200 bg-primary-100 text-primary' },
+  { label: '独立用户(UV)', value: overview.value.unique_visitors || 0, class: 'border-[#B7CBFF] bg-[#ECF3FF] text-[#1D4ED8]' },
+  { label: '独立 IP', value: overview.value.unique_ips || 0, class: 'border-[#F5B3AE] bg-[#FDEEEE] text-[#B42318]' },
+  { label: '搜索词数', value: overview.value.unique_keywords || 0, class: 'border-[#B7CBFF] bg-[#ECF3FF] text-[#1D4ED8]' },
+  { label: '有结果率', value: resultRate.value, class: 'border-[#A7DEC7] bg-[#EAF8F3] text-[#156B52]' },
+  { label: '高峰时段', value: peakHour.value, class: 'border-[#F3CF8D] bg-[#FFF6E8] text-[#9A5A00]' },
+])
 </script>
 
 <template>
-  <div class="min-h-screen bg-clay-canvas text-clay-foreground antialiased pb-10 relative overflow-hidden">
-    <!-- Floating Clay Blobs -->
-    <div class="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-      <div
-        class="absolute h-[60vh] w-[60vh] rounded-full blur-3xl animate-clay-float"
-        style="background: rgba(136, 79, 34, 0.08); top: -10%; left: -10%;"
-      ></div>
-      <div
-        class="absolute h-[50vh] w-[50vh] rounded-full blur-3xl animate-clay-float-delayed animation-delay-2000"
-        style="background: rgba(196, 149, 106, 0.08); top: 20%; right: -10%;"
-      ></div>
-      <div
-        class="absolute h-[45vh] w-[45vh] rounded-full blur-3xl animate-clay-float-slow animation-delay-4000"
-        style="background: rgba(16, 185, 129, 0.06); bottom: -5%; left: 20%;"
-      ></div>
-    </div>
-
+  <div class="page-shell relative pb-10 antialiased">
     <AppHeader title="数据大屏" show-back />
 
-    <main class="px-4 py-6 space-y-5 max-w-3xl mx-auto relative z-10">
-      <!-- 时间范围切换 -->
+    <main class="relative z-10 mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
       <div class="clay-card p-4">
-        <div class="relative z-10 flex items-center justify-center gap-2">
+        <div class="relative z-10 flex items-center justify-center rounded-xl bg-[#F3EFEB] p-1">
           <button
             v-for="opt in timeRangeOptions"
             :key="opt.value"
             @click="timeRange = opt.value"
-            class="px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300"
+            class="min-h-10 flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition"
             :class="timeRange === opt.value
-              ? 'text-white'
+              ? 'bg-white text-primary shadow-sm'
               : 'text-clay-muted hover:text-clay-foreground'"
-            :style="timeRange === opt.value
-              ? {
-                  background: 'linear-gradient(135deg, #C4956A 0%, #884F22 100%)',
-                  boxShadow: '8px 8px 16px rgba(136,79,34,0.2), -4px -4px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.05)',
-                }
-              : {
-                  background: 'rgba(255,255,255,0.5)',
-                  boxShadow: '4px 4px 8px rgba(136,79,34,0.04), -3px -3px 6px rgba(255,255,255,0.8)',
-                }"
           >
             {{ opt.label }}
           </button>
         </div>
       </div>
 
-      <!-- Loading -->
       <div v-if="loading" class="clay-card p-12 text-center">
         <div class="relative z-10">
           <div class="inline-block w-10 h-10 border-4 border-primary-200 border-t-primary rounded-full animate-spin"></div>
@@ -490,7 +472,6 @@ const resultRate = computed(() => {
         </div>
       </div>
 
-      <!-- Error -->
       <div v-else-if="error" class="clay-card p-8 text-center">
         <div class="relative z-10">
           <p class="text-red-500 font-semibold">{{ error }}</p>
@@ -498,112 +479,36 @@ const resultRate = computed(() => {
         </div>
       </div>
 
-      <!-- 数据内容 -->
       <template v-else-if="data">
-        <!-- 总览数字 -->
         <div class="clay-card p-6">
           <div class="relative z-10">
-            <h3 class="text-base font-bold text-clay-foreground mb-5 font-heading">
+            <h3 class="mb-5 text-base font-semibold text-clay-foreground font-heading">
               数据总览
-              <span class="text-xs font-medium text-clay-muted ml-2">{{ timeRangeLabel }}</span>
+              <span class="ml-2 text-xs font-medium text-clay-muted">{{ timeRangeLabel }}</span>
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <!-- 总查询 -->
               <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(136,79,34,0.08) 0%, rgba(136,79,34,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(136,79,34,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(136,79,34,0.04);
-                "
+                v-for="item in overviewCards"
+                :key="item.label"
+                :class="['rounded-2xl border p-4 text-center', item.class]"
               >
-                <div class="text-2xl sm:text-3xl font-black text-primary font-heading">
-                  {{ overview.total_count || 0 }}
+                <div class="text-2xl font-bold sm:text-3xl font-heading">
+                  {{ item.value }}
                 </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">总查询次数</div>
-              </div>
-
-              <!-- 独立用户 (UV) -->
-              <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(139,92,246,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(139,92,246,0.04);
-                "
-              >
-                <div class="text-2xl sm:text-3xl font-black text-violet-600 font-heading">
-                  {{ overview.unique_visitors || 0 }}
-                </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">独立用户(UV)</div>
-              </div>
-
-              <!-- 独立 IP -->
-              <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(244,63,94,0.08) 0%, rgba(244,63,94,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(244,63,94,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(244,63,94,0.04);
-                "
-              >
-                <div class="text-2xl sm:text-3xl font-black text-rose-600 font-heading">
-                  {{ overview.unique_ips || 0 }}
-                </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">独立 IP</div>
-              </div>
-
-              <!-- 独立搜索词 -->
-              <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(14,165,233,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(14,165,233,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(14,165,233,0.04);
-                "
-              >
-                <div class="text-2xl sm:text-3xl font-black text-sky-600 font-heading">
-                  {{ overview.unique_keywords || 0 }}
-                </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">搜索词数</div>
-              </div>
-
-              <!-- 查询成功率 -->
-              <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(16,185,129,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(16,185,129,0.04);
-                "
-              >
-                <div class="text-2xl sm:text-3xl font-black text-emerald-600 font-heading">
-                  {{ resultRate }}
-                </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">有结果率</div>
-              </div>
-
-              <!-- 高峰时段 -->
-              <div
-                class="rounded-[20px] p-4 text-center transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                style="
-                  background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.15) 100%);
-                  box-shadow: 8px 8px 16px rgba(245,158,11,0.08), -6px -6px 12px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(245,158,11,0.04);
-                "
-              >
-                <div class="text-2xl sm:text-3xl font-black text-amber-600 font-heading">
-                  {{ peakHour }}
-                </div>
-                <div class="text-xs text-clay-muted mt-1 font-medium">高峰时段</div>
+                <div class="mt-1 text-xs font-medium text-clay-muted">{{ item.label }}</div>
               </div>
             </div>
 
-            <!-- 二级指标 -->
             <div class="grid grid-cols-3 gap-3 mt-4">
-              <div class="rounded-[16px] p-3 text-center" style="background: rgba(255,255,255,0.5); box-shadow: 4px 4px 8px rgba(136,79,34,0.04), -3px -3px 6px rgba(255,255,255,0.8);">
+              <div class="rounded-2xl border border-subtle bg-white p-3 text-center">
                 <div class="text-lg font-bold text-primary font-heading">{{ overview.today_count || 0 }}</div>
                 <div class="text-xs text-clay-muted font-medium">今日</div>
               </div>
-              <div class="rounded-[16px] p-3 text-center" style="background: rgba(255,255,255,0.5); box-shadow: 4px 4px 8px rgba(136,79,34,0.04), -3px -3px 6px rgba(255,255,255,0.8);">
+              <div class="rounded-2xl border border-subtle bg-white p-3 text-center">
                 <div class="text-lg font-bold text-emerald-600 font-heading">{{ overview.week_count || 0 }}</div>
                 <div class="text-xs text-clay-muted font-medium">本周</div>
               </div>
-              <div class="rounded-[16px] p-3 text-center" style="background: rgba(255,255,255,0.5); box-shadow: 4px 4px 8px rgba(136,79,34,0.04), -3px -3px 6px rgba(255,255,255,0.8);">
+              <div class="rounded-2xl border border-subtle bg-white p-3 text-center">
                 <div class="text-lg font-bold text-sky-600 font-heading">{{ overview.month_count || 0 }}</div>
                 <div class="text-xs text-clay-muted font-medium">本月</div>
               </div>

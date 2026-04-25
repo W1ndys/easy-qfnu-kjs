@@ -43,29 +43,17 @@ function handleCustomOffsetInput() {
 
 <template>
   <div>
-    <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">日期</label>
+    <label class="mb-2 block text-sm font-semibold text-clay-muted">日期</label>
 
-    <!-- Clay segmented control -->
-    <div
-      class="p-1.5 rounded-[20px] flex mb-3"
-      style="
-        background: #F0EAE3;
-        box-shadow:
-          inset 6px 6px 12px rgba(136, 79, 34, 0.06),
-          inset -6px -6px 12px rgba(255, 255, 255, 0.9);
-      "
-    >
+    <div class="mb-3 flex rounded-xl bg-[#F3EFEB] p-1">
       <button
         v-for="(label, idx) in quickDateLabels"
         :key="idx"
         type="button"
-        class="flex-1 py-2 text-[13px] font-bold rounded-[16px] transition-all duration-300"
+        class="min-h-10 flex-1 rounded-lg px-2 py-2 text-[13px] font-semibold transition"
         :class="dateOffset === idx && !useCustomDate
-          ? 'text-clay-foreground'
+          ? 'bg-white text-primary shadow-sm'
           : 'text-clay-muted hover:text-clay-foreground'"
-        :style="dateOffset === idx && !useCustomDate
-          ? 'background: white; box-shadow: 8px 8px 16px rgba(136, 79, 34, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.9), inset 2px 2px 4px rgba(255, 255, 255, 0.6), inset -2px -2px 4px rgba(0, 0, 0, 0.02);'
-          : ''"
         @click="setQuickDate(idx)"
       >
         {{ label }}
@@ -73,13 +61,10 @@ function handleCustomOffsetInput() {
 
       <button
         type="button"
-        class="flex-1 py-2 text-[13px] font-bold rounded-[16px] transition-all duration-300"
+        class="min-h-10 flex-1 rounded-lg px-2 py-2 text-[13px] font-semibold transition"
         :class="useCustomDate
-          ? 'text-clay-foreground'
+          ? 'bg-white text-primary shadow-sm'
           : 'text-clay-muted hover:text-clay-foreground'"
-        :style="useCustomDate
-          ? 'background: white; box-shadow: 8px 8px 16px rgba(136, 79, 34, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.9), inset 2px 2px 4px rgba(255, 255, 255, 0.6), inset -2px -2px 4px rgba(0, 0, 0, 0.02);'
-          : ''"
         @click="toggleCustomDate"
       >
         自定义
@@ -102,7 +87,7 @@ function handleCustomOffsetInput() {
         </div>
         <span class="text-clay-muted text-sm font-medium whitespace-nowrap">天后</span>
       </div>
-      <p class="text-xs text-clay-muted ml-1 font-medium">{{ customDatePreview }}</p>
+      <p class="ml-1 text-xs font-medium text-clay-muted">{{ customDatePreview }}</p>
     </div>
   </div>
 </template>

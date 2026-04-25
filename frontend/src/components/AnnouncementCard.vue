@@ -36,17 +36,7 @@ watch(hasUnread, (val) => {
       <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <!-- 公告图标 -->
-          <div
-            class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            :style="{
-              background: hasUnread
-                ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
-                : 'linear-gradient(135deg, #D4AD82 0%, #C4A882 100%)',
-              boxShadow: hasUnread
-                ? '4px 4px 8px rgba(245, 158, 11, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.4)'
-                : '4px 4px 8px rgba(136, 79, 34, 0.1), -2px -2px 4px rgba(255, 255, 255, 0.5)',
-            }"
-          >
+          <div :class="['flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl text-white', hasUnread ? 'bg-[#9A5A00]' : 'bg-primary']">
             <svg
               class="w-4 h-4 text-white"
               fill="none"
@@ -66,15 +56,7 @@ watch(hasUnread, (val) => {
           </span>
         </div>
         <!-- 展开箭头 -->
-        <div
-          class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-          style="
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow:
-              3px 3px 6px rgba(136, 79, 34, 0.06),
-              -2px -2px 4px rgba(255, 255, 255, 0.8);
-          "
-        >
+        <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-subtle bg-white">
           <svg
             class="w-3 h-3 text-clay-muted"
             fill="none"
@@ -98,17 +80,7 @@ watch(hasUnread, (val) => {
         <!-- 标题栏 -->
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center space-x-3">
-            <div
-              class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-              :style="{
-                background: hasUnread
-                  ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
-                  : 'linear-gradient(135deg, #D4AD82 0%, #C4A882 100%)',
-                boxShadow: hasUnread
-                  ? '6px 6px 12px rgba(245, 158, 11, 0.2), -3px -3px 6px rgba(255, 255, 255, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.4)'
-                  : '6px 6px 12px rgba(136, 79, 34, 0.1), -3px -3px 6px rgba(255, 255, 255, 0.5)',
-              }"
-            >
+            <div :class="['flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-white', hasUnread ? 'bg-[#9A5A00]' : 'bg-primary']">
               <svg
                 class="w-5 h-5 text-white"
                 fill="none"
@@ -125,16 +97,11 @@ watch(hasUnread, (val) => {
             </div>
             <h3
               class="text-base font-bold text-clay-foreground"
-              style="font-family: 'Nunito', sans-serif"
             >
               系统公告
               <span
                 v-if="hasUnread"
-                class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white rounded-full"
-                style="
-                  background: linear-gradient(135deg, #F59E0B, #D97706);
-                  box-shadow: 2px 2px 4px rgba(245, 158, 11, 0.3);
-                "
+                class="ml-2 inline-flex items-center justify-center rounded-full bg-[#9A5A00] px-2 py-0.5 text-xs font-bold text-white"
               >
                 {{ unreadCount }} 条未读
               </span>
@@ -142,13 +109,7 @@ watch(hasUnread, (val) => {
           </div>
           <!-- 收起按钮 -->
           <button
-            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:scale-110"
-            style="
-              background: rgba(255, 255, 255, 0.6);
-              box-shadow:
-                4px 4px 8px rgba(136, 79, 34, 0.06),
-                -3px -3px 6px rgba(255, 255, 255, 0.8);
-            "
+            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-subtle bg-white transition hover:bg-primary-50"
             title="收起公告"
             @click="handleToggle"
           >
@@ -174,22 +135,7 @@ watch(hasUnread, (val) => {
             v-for="item in allAnnouncements"
             :key="item.id"
             class="rounded-2xl p-4 transition-all duration-300"
-            :style="{
-              background: item.important
-                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.15) 100%)'
-                : 'linear-gradient(135deg, rgba(136, 79, 34, 0.04) 0%, rgba(136, 79, 34, 0.08) 100%)',
-              boxShadow: [
-                '6px 6px 12px rgba(136, 79, 34, 0.05)',
-                '-4px -4px 8px rgba(255, 255, 255, 0.8)',
-                'inset 2px 2px 4px rgba(255, 255, 255, 0.5)',
-                'inset -2px -2px 4px rgba(136, 79, 34, 0.02)',
-              ].join(', '),
-              borderLeft: item.important
-                ? '3px solid #F59E0B'
-                : !isRead(item.id)
-                  ? '3px solid #10B981'
-                  : '3px solid transparent',
-            }"
+            :class="item.important ? 'border border-[#F3CF8D] bg-[#FFF6E8]' : 'border border-subtle bg-[#FAF8F6]'"
           >
             <div class="flex items-start justify-between gap-2">
               <h4
