@@ -55,6 +55,7 @@ docker compose up -d --build
 - `frontend` 容器负责提供页面，并通过 Nginx 反向代理 `/api` 到 `backend:8080`
 - `backend` 容器仅加入内部网络，不直接暴露宿主机端口
 - `Traefik` 通过 `frontend` 容器标签接入对外流量
+- `frontend` 健康检查使用 `curl -f http://127.0.0.1/index.html`，避免因 BusyBox `wget` 差异导致 Traefik 无法发现可用后端
 
 ### 4. 查看状态
 
@@ -116,6 +117,8 @@ task ps
 ## 运维部署
 
 `Taskfile.yml` 已增加开发运维相关任务，并统一设置为 `silent: true`。
+
+统计大屏接口在无数据时间范围下也会返回空统计结果，不再因为 SQLite 聚合函数返回 `NULL` 而触发 500。
 
 ### 远程同步项目文件
 
