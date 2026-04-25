@@ -72,9 +72,19 @@ function onInputChange() {
   showHistory.value = false
 }
 
-function selectHistoryItem(keyword) {
-  form.building = keyword
+function applySearchItem(item) {
+  form.building = item.building || item
+  if (item.offset !== undefined) form.offset = item.offset
+  if (item.date_offset !== undefined) form.offset = item.date_offset
+  if (item.start) form.start = item.start
+  if (item.end) form.end = item.end
+  if (item.start_node) form.start = item.start_node
+  if (item.end_node) form.end = item.end_node
   showHistory.value = false
+}
+
+function selectHistoryItem(item) {
+  applySearchItem(item)
 }
 
 async function search() {
@@ -111,7 +121,12 @@ async function search() {
       day: data.day_of_week,
     }
     hasSearched.value = true
-    addToHistory(building)
+    addToHistory({
+      building,
+      offset: form.offset,
+      start: form.start,
+      end: form.end,
+    })
   } catch (error) {
     console.error(error)
     showAlert(getErrorMessage(error, '查询出错，请重试'), {
@@ -124,22 +139,10 @@ async function search() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-clay-canvas text-clay-foreground antialiased pb-10 relative overflow-hidden">
-    <!-- Floating Clay Blobs -->
-    <div class="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-      <div
-        class="absolute h-[50vh] w-[50vh] rounded-full blur-3xl animate-clay-float"
-        style="background: rgba(136, 79, 34, 0.06); top: -5%; right: -15%;"
-      ></div>
-      <div
-        class="absolute h-[40vh] w-[40vh] rounded-full blur-3xl animate-clay-float-delayed animation-delay-2000"
-        style="background: rgba(16, 185, 129, 0.05); bottom: 10%; left: -10%;"
-      ></div>
-    </div>
-
+  <div class="page-shell pb-10 antialiased">
     <AppHeader title="空教室查询" showBack />
 
-    <main class="px-4 py-4 space-y-5 max-w-xl mx-auto relative z-10">
+    <main class="relative z-10 mx-auto max-w-3xl space-y-5 px-4 py-5 sm:px-6">
       <StatusWarning
         v-if="!hasPermission && !statusLoading"
         type="error"
@@ -156,30 +159,15 @@ async function search() {
 
       <LoadingSpinner v-if="statusLoading" text="正在检查系统状态..." />
 
-      <div v-else class="clay-card p-5 sm:p-7 space-y-5">
+      <div v-else class="clay-card space-y-5 p-5 sm:p-6">
         <div class="relative z-10 space-y-5">
-          <!-- Term info badge -->
           <div
             v-if="inTeachingCalendar"
-            class="rounded-[20px] p-3.5"
-            style="
-              background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0.12) 100%);
-              box-shadow:
-                8px 8px 16px rgba(16, 185, 129, 0.06),
-                -6px -6px 12px rgba(255, 255, 255, 0.9),
-                inset 3px 3px 6px rgba(255, 255, 255, 0.5),
-                inset -3px -3px 6px rgba(16, 185, 129, 0.03);
-            "
+            class="rounded-2xl border border-[#A7DEC7] bg-[#EAF8F3] p-3.5"
           >
-            <div class="flex items-center space-x-2.5 text-emerald-700 text-sm font-medium">
-              <div
-                class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                style="
-                  background: linear-gradient(135deg, #6EE7B7 0%, #10B981 100%);
-                  box-shadow: 3px 3px 6px rgba(16, 185, 129, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.3);
-                "
-              >
-                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center gap-2.5 text-sm font-medium text-[#156B52]">
+              <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#156B52]">
+                <svg class="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -189,7 +177,7 @@ async function search() {
 
           <!-- Building input -->
           <div>
-            <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">教学楼</label>
+            <label class="mb-2 block text-sm font-semibold text-clay-muted">教学楼</label>
             <div class="relative">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted/60">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -204,7 +192,7 @@ async function search() {
               <input
                 v-model="form.building"
                 type="text"
-                class="w-full clay-input py-3.5 pl-11 pr-5 text-[15px]"
+                class="w-full clay-input px-5 py-3.5 pl-11 text-[15px]"
                 placeholder="例如：老文史楼"
                 @focus="onInputFocus"
                 @blur="onInputBlur"
@@ -213,33 +201,24 @@ async function search() {
               <!-- Search history dropdown -->
               <div
                 v-if="showHistoryList"
-                class="absolute z-20 w-full mt-2 rounded-[20px] overflow-hidden"
-                style="
-                  background: rgba(255, 255, 255, 0.95);
-                  backdrop-filter: blur(24px);
-                  box-shadow:
-                    16px 16px 32px rgba(136, 79, 34, 0.1),
-                    -10px -10px 24px rgba(255, 255, 255, 0.9),
-                    inset 4px 4px 8px rgba(255, 255, 255, 0.6),
-                    inset -4px -4px 8px rgba(136, 79, 34, 0.02);
-                "
+                class="absolute z-40 mt-2 w-full overflow-hidden rounded-2xl border border-subtle bg-white shadow-claySurface"
               >
-                <div class="flex items-center justify-between px-4 py-2.5 border-b border-primary-100/30">
-                  <span class="text-xs text-clay-muted font-medium">搜索历史</span>
-                  <button type="button" class="text-xs text-clay-muted hover:text-primary font-medium transition-colors" @click="clearHistory">清除</button>
+                <div class="flex items-center justify-between border-b border-subtle px-4 py-2.5">
+                  <span class="text-xs font-medium text-clay-muted">搜索历史</span>
+                  <button type="button" class="text-xs font-medium text-clay-muted transition-colors hover:text-primary" @click="clearHistory">清除</button>
                 </div>
                 <div class="max-h-48 overflow-y-auto">
                   <button
                     v-for="(item, index) in history"
                     :key="index"
                     type="button"
-                    class="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 flex items-center transition-colors font-medium"
+                    class="flex w-full items-center px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-primary-50"
                     @mousedown.prevent="selectHistoryItem(item)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-clay-muted/60 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {{ item }}
+                    <span>{{ item.label || item.building || item }}</span>
                   </button>
                 </div>
               </div>
@@ -248,13 +227,12 @@ async function search() {
 
           <!-- Top queries quick select -->
           <div v-if="topQueries.length > 0" class="flex flex-wrap gap-2">
-            <span class="text-xs text-clay-muted font-medium leading-7 mr-0.5">热搜</span>
+            <span class="mr-0.5 text-xs font-medium leading-9 text-clay-muted">热搜</span>
             <button
               v-for="(query, idx) in topQueries"
               :key="idx"
               type="button"
-              class="px-3 py-1 text-xs font-medium rounded-full transition-all duration-200 hover:-translate-y-0.5 text-primary"
-              style="background: rgba(255, 255, 255, 0.6); box-shadow: 4px 4px 8px rgba(136, 79, 34, 0.06), -3px -3px 6px rgba(255, 255, 255, 0.8), inset 2px 2px 4px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(136, 79, 34, 0.02);"
+              class="design-chip px-3 text-xs font-medium text-primary transition hover:border-primary-200 hover:bg-primary-50"
               @click="selectTopQuery(query)"
             >
               {{ query.label }}
@@ -267,20 +245,20 @@ async function search() {
           <!-- Node selectors -->
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">起始节次</label>
+              <label class="mb-2 block text-sm font-semibold text-clay-muted">起始节次</label>
               <select
                 v-model="form.start"
-                class="w-full clay-input py-3.5 px-5 text-[15px] appearance-none"
+                class="w-full clay-input appearance-none px-5 py-3.5 text-[15px]"
               >
                 <option v-for="value in nodeOptions" :key="`start-${value}`" :value="value">{{ value }}</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-clay-muted mb-2 ml-1">终止节次</label>
+              <label class="mb-2 block text-sm font-semibold text-clay-muted">终止节次</label>
               <select
                 v-model="form.end"
-                class="w-full clay-input py-3.5 px-5 text-[15px] appearance-none"
+                class="w-full clay-input appearance-none px-5 py-3.5 text-[15px]"
               >
                 <option v-for="value in nodeOptions" :key="`end-${value}`" :value="value">{{ value }}</option>
               </select>
@@ -291,10 +269,10 @@ async function search() {
           <button
             type="button"
             :disabled="loading"
-            class="w-full btn-clay-primary h-14 text-base"
+            class="btn-clay-primary h-12 w-full text-base"
             @click="search"
           >
-            <span v-if="!loading" style="font-family: 'Nunito', sans-serif;">查询空闲教室</span>
+            <span v-if="!loading">查询空闲教室</span>
             <span v-else class="flex items-center">
               <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -307,52 +285,29 @@ async function search() {
       </div>
 
       <!-- Result info bar -->
-      <div v-if="resultInfo" class="px-3 flex items-center justify-between text-xs text-clay-muted font-medium">
+      <div v-if="resultInfo" class="flex items-center justify-between rounded-2xl border border-subtle bg-white px-4 py-3 text-xs font-medium text-clay-muted">
         <span>{{ resultInfo.date }} (第{{ resultInfo.week }}周 星期{{ resultInfo.day }})</span>
-        <span
-          class="px-3 py-1 rounded-full font-bold"
-          style="
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow:
-              4px 4px 8px rgba(136, 79, 34, 0.04),
-              -3px -3px 6px rgba(255, 255, 255, 0.8);
-          "
-        >
+        <span class="rounded-full bg-primary-100 px-3 py-1 font-bold text-primary">
           共 {{ results.length }} 间
         </span>
       </div>
 
       <!-- Results grid -->
       <div v-if="results.length > 0" class="space-y-4">
-        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-5">
           <div
             v-for="(room, index) in displayedResults"
             :key="`${room}-${index}`"
-            class="rounded-2xl py-2.5 px-2 flex items-center justify-center text-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-105"
-            style="
-              background: rgba(255, 255, 255, 0.65);
-              backdrop-filter: blur(12px);
-              box-shadow:
-                6px 6px 14px rgba(136, 79, 34, 0.05),
-                -4px -4px 10px rgba(255, 255, 255, 0.9),
-                inset 3px 3px 6px rgba(255, 255, 255, 0.7),
-                inset -3px -3px 6px rgba(136, 79, 34, 0.02);
-            "
+            class="flex min-h-11 items-center justify-center rounded-xl border border-subtle bg-white px-2 py-2.5 text-center transition hover:border-primary-200 hover:bg-primary-50"
           >
-            <span class="text-primary font-bold text-sm sm:text-base" style="font-family: 'Nunito', sans-serif;">{{ room }}</span>
+            <span class="text-sm font-bold text-primary sm:text-base">{{ room }}</span>
           </div>
         </div>
 
         <div v-if="results.length > displayLimit" class="mt-4 text-center">
           <button
             type="button"
-            class="text-primary text-sm font-bold hover:underline py-2.5 px-6 rounded-[20px] transition-all duration-200 hover:-translate-y-0.5"
-            style="
-              background: rgba(255, 255, 255, 0.5);
-              box-shadow:
-                6px 6px 12px rgba(136, 79, 34, 0.05),
-                -4px -4px 8px rgba(255, 255, 255, 0.8);
-            "
+            class="rounded-lg border border-primary-200 bg-white px-6 py-2.5 text-sm font-bold text-primary transition hover:bg-primary-50"
             @click="displayLimit += 100"
           >
             加载更多 (显示 {{ displayedResults.length }} / {{ results.length }})
