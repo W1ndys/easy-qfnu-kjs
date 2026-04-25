@@ -580,9 +580,9 @@ func (s *StatsService) getDashboardResultStats(startTime string) (model.ResultSt
 	// 基础统计
 	err := s.db.QueryRow(`
 		SELECT COALESCE(AVG(result_count), 0), COALESCE(MAX(result_count), 0),
-			   COALESCE(MIN(CASE WHEN result_count > 0 THEN result_count END), 0),
-			   SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END),
-			   SUM(CASE WHEN result_count > 0 THEN 1 ELSE 0 END)
+		       COALESCE(MIN(CASE WHEN result_count > 0 THEN result_count END), 0),
+		       COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN result_count > 0 THEN 1 ELSE 0 END), 0)
 		FROM query_logs WHERE queried_at >= ?`, startTime,
 	).Scan(&r.AvgCount, &r.MaxCount, &r.MinCount, &r.ZeroCount, &r.NonZeroCount)
 	if err != nil {

@@ -83,6 +83,7 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 部署逻辑继续通过独立 `sh` 脚本实现，便于后续复用
   - 运维任务中只保留 `task deploy`，不再保留 `prod-deploy` 别名
   - 当前部署方式全面迁移到 Docker 运行，不再保留 `systemd` / `systemctl` 相关脚本、任务和示例
+  - 前端健康检查优先使用 `curl -f http://127.0.0.1/index.html`，避免 Traefik 因容器误判不健康而返回 404
 
 ### Git 与回复偏好
 - Date: 2026-04-25
