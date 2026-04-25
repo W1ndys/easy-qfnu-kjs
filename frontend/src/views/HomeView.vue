@@ -3,188 +3,96 @@ import AnnouncementCard from '@/components/AnnouncementCard.vue'
 import QRCodeCard from '@/components/QRCodeCard.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import StatsCard from '@/components/StatsCard.vue'
+
+const featureCards = [
+  {
+    to: '/empty-classroom',
+    title: '空教室查询',
+    description: '输入教学楼、日期和节次，快速找到可用教室。',
+    label: '高频查询',
+    colorClass: 'border-[#A7DEC7] bg-[#EAF8F3] text-[#156B52]',
+    iconPath: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+  },
+  {
+    to: '/full-day-status',
+    title: '教室全天状态',
+    description: '按节次查看教学楼全天占用情况，适合对比和排查。',
+    label: '状态矩阵',
+    colorClass: 'border-primary-200 bg-primary-100 text-primary',
+    iconPath: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
+  },
+  {
+    to: '/dashboard',
+    title: '数据大屏',
+    description: '查看查询趋势、热门关键词和结果分布。',
+    label: '运营分析',
+    colorClass: 'border-[#B7CBFF] bg-[#ECF3FF] text-[#1D4ED8]',
+    iconPath: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+  },
+]
 </script>
 
 <template>
-  <div class="min-h-screen bg-clay-canvas text-clay-foreground antialiased pb-10 relative overflow-hidden">
-    <!-- Floating Clay Blobs - ambient background lighting -->
-    <div class="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-      <div
-        class="absolute h-[60vh] w-[60vh] rounded-full blur-3xl animate-clay-float"
-        style="background: rgba(136, 79, 34, 0.08); top: -10%; left: -10%;"
-      ></div>
-      <div
-        class="absolute h-[50vh] w-[50vh] rounded-full blur-3xl animate-clay-float-delayed animation-delay-2000"
-        style="background: rgba(196, 149, 106, 0.08); top: 20%; right: -10%;"
-      ></div>
-      <div
-        class="absolute h-[45vh] w-[45vh] rounded-full blur-3xl animate-clay-float-slow animation-delay-4000"
-        style="background: rgba(16, 185, 129, 0.06); bottom: -5%; left: 20%;"
-      ></div>
-    </div>
+  <div class="page-shell pb-10 antialiased">
+    <main class="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section class="overflow-hidden rounded-[20px] border border-subtle bg-white shadow-clayCard">
+        <div class="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+          <div>
+            <div class="mb-4 inline-flex items-center rounded-full border border-primary-200 bg-primary-100 px-3 py-1 text-xs font-semibold text-primary">
+              QFNU Campus Tool
+            </div>
+            <h1 class="font-heading text-[2rem] font-bold leading-tight tracking-[-0.02em] text-clay-foreground sm:text-[2.5rem]">
+              教室查询系统
+            </h1>
+            <p class="mt-3 max-w-2xl text-base leading-7 text-clay-muted sm:text-lg">
+              面向曲阜师范大学学生的轻量查询工具，把空教室、全天状态和查询热度组织在一个清晰入口里。
+            </p>
+          </div>
+          <div class="rounded-2xl border border-subtle bg-[#FAF8F6] p-4">
+            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-clay-muted">Quick Path</div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-semibold text-clay-muted">
+              <span class="rounded-xl bg-white px-2 py-3 text-primary shadow-sm">选楼</span>
+              <span class="rounded-xl bg-white px-2 py-3 text-primary shadow-sm">选日期</span>
+              <span class="rounded-xl bg-white px-2 py-3 text-primary shadow-sm">看结果</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <main class="px-4 py-6 space-y-6 max-w-xl mx-auto relative z-10">
-      <!-- Hero Title -->
-      <div class="text-center py-8 sm:py-12">
-        <h2
-          class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-clay-foreground leading-[1.1]"
-          style="font-family: 'Nunito', sans-serif;"
-        >
-          QFNU
-          <span
-            class="block mt-1 bg-gradient-to-r from-clay-foreground via-primary to-primary-light bg-clip-text text-transparent"
-          >
-            教室查询系统
-          </span>
-        </h2>
-      </div>
-
-      <!-- Announcement Card -->
       <AnnouncementCard />
-
-      <!-- Stats Card -->
       <StatsCard />
 
-      <!-- Navigation Cards -->
-      <div class="space-y-5">
-        <!-- Empty Classroom Query Card -->
+      <section class="grid gap-4 md:grid-cols-3">
         <RouterLink
-          to="/empty-classroom"
-          class="block clay-card p-6 sm:p-8"
+          v-for="card in featureCards"
+          :key="card.to"
+          :to="card.to"
+          class="clay-card group block p-5 focus:outline-none focus:ring-4 focus:ring-primary-200"
         >
-          <div class="relative z-10 flex items-center space-x-4">
-            <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style="
-                background: linear-gradient(135deg, #6EE7B7 0%, #10B981 100%);
-                box-shadow:
-                  8px 8px 16px rgba(16, 185, 129, 0.25),
-                  -4px -4px 8px rgba(255, 255, 255, 0.3),
-                  inset 2px 2px 4px rgba(255, 255, 255, 0.4),
-                  inset -2px -2px 4px rgba(0, 0, 0, 0.05);
-              "
-            >
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+          <div class="flex h-full flex-col gap-5">
+            <div class="flex items-start justify-between gap-4">
+              <div :class="['flex h-12 w-12 items-center justify-center rounded-2xl border', card.colorClass]">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="card.iconPath" />
+                </svg>
+              </div>
+              <span class="rounded-full border border-subtle bg-[#FAF8F6] px-2.5 py-1 text-xs font-semibold text-clay-muted">
+                {{ card.label }}
+              </span>
             </div>
             <div class="flex-1">
-              <h3 class="text-lg font-bold text-clay-foreground" style="font-family: 'Nunito', sans-serif;">空教室查询</h3>
-              <p class="text-sm text-clay-muted mt-1 leading-relaxed font-medium">查询指定时间段内的空闲教室</p>
+              <h2 class="text-lg font-semibold text-clay-foreground">{{ card.title }}</h2>
+              <p class="mt-2 text-sm leading-6 text-clay-muted">{{ card.description }}</p>
             </div>
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style="
-                background: rgba(255, 255, 255, 0.6);
-                box-shadow:
-                  4px 4px 8px rgba(136, 79, 34, 0.06),
-                  -3px -3px 6px rgba(255, 255, 255, 0.8);
-              "
-            >
-              <svg class="w-4 h-4 text-clay-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+            <div class="flex items-center justify-between border-t border-subtle pt-4 text-sm font-semibold text-primary">
+              <span>立即进入</span>
+              <svg class="h-4 w-4 transition group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </div>
           </div>
         </RouterLink>
-
-        <!-- Full Day Status Card -->
-        <RouterLink
-          to="/full-day-status"
-          class="block clay-card p-6 sm:p-8"
-        >
-          <div class="relative z-10 flex items-center space-x-4">
-            <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style="
-                background: linear-gradient(135deg, #C4956A 0%, #884F22 100%);
-                box-shadow:
-                  8px 8px 16px rgba(136, 79, 34, 0.25),
-                  -4px -4px 8px rgba(255, 255, 255, 0.3),
-                  inset 2px 2px 4px rgba(255, 255, 255, 0.4),
-                  inset -2px -2px 4px rgba(0, 0, 0, 0.05);
-              "
-            >
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-                />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <h3 class="text-lg font-bold text-clay-foreground" style="font-family: 'Nunito', sans-serif;">教室全天状态</h3>
-              <p class="text-sm text-clay-muted mt-1 leading-relaxed font-medium">查看指定教学楼全天各节次的占用情况</p>
-            </div>
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style="
-                background: rgba(255, 255, 255, 0.6);
-                box-shadow:
-                  4px 4px 8px rgba(136, 79, 34, 0.06),
-                  -3px -3px 6px rgba(255, 255, 255, 0.8);
-              "
-            >
-              <svg class="w-4 h-4 text-clay-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        </RouterLink>
-
-        <!-- Dashboard Data Screen Card -->
-        <RouterLink
-          to="/dashboard"
-          class="block clay-card p-6 sm:p-8"
-        >
-          <div class="relative z-10 flex items-center space-x-4">
-            <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style="
-                background: linear-gradient(135deg, #93C5FD 0%, #3B82F6 100%);
-                box-shadow:
-                  8px 8px 16px rgba(59, 130, 246, 0.25),
-                  -4px -4px 8px rgba(255, 255, 255, 0.3),
-                  inset 2px 2px 4px rgba(255, 255, 255, 0.4),
-                  inset -2px -2px 4px rgba(0, 0, 0, 0.05);
-              "
-            >
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <h3 class="text-lg font-bold text-clay-foreground" style="font-family: 'Nunito', sans-serif;">数据大屏</h3>
-              <p class="text-sm text-clay-muted mt-1 leading-relaxed font-medium">查看详细的查询统计与趋势分析</p>
-            </div>
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style="
-                background: rgba(255, 255, 255, 0.6);
-                box-shadow:
-                  4px 4px 8px rgba(136, 79, 34, 0.06),
-                  -3px -3px 6px rgba(255, 255, 255, 0.8);
-              "
-            >
-              <svg class="w-4 h-4 text-clay-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        </RouterLink>
-      </div>
+      </section>
 
       <QRCodeCard />
       <AppFooter />
