@@ -90,6 +90,8 @@ func main() {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
 	r.RedirectFixedPath = false
+	r.ForwardedByClientIP = true
+	r.RemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP"}
 
 	// 搜索接口速率限制：基于 IP + User-Agent，5 秒内只能查询一次
 	searchRateLimiter := middleware.NewRateLimiter(5 * time.Second)
