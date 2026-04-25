@@ -71,7 +71,12 @@ func main() {
 	classroomService := service.NewClassroomService(client)
 
 	// 初始化统计服务
-	statsService, err := service.NewStatsService("data/stats.db")
+	statsDBPath := os.Getenv("STATS_DB_PATH")
+	if statsDBPath == "" {
+		statsDBPath = "data/stats.db"
+	}
+
+	statsService, err := service.NewStatsService(statsDBPath)
 	if err != nil {
 		logger.Warn("初始化统计服务失败：%v。统计功能将不可用。", err)
 	}

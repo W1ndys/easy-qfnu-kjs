@@ -85,6 +85,15 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 当前部署方式全面迁移到 Docker 运行，不再保留 `systemd` / `systemctl` 相关脚本、任务和示例
   - 前端健康检查优先使用 `curl -f http://127.0.0.1/index.html`，避免 Traefik 因容器误判不健康而返回 404
 
+### Docker 挂载目录权限约定
+- Date: 2026-04-25
+- Context: Agent 在执行统计数据库只读问题修复时发现
+- Category: 环境配置
+- Instructions:
+  - 后端容器以非 root 用户 `app` 运行，但 `./data`、`./logs` 由宿主机 bind mount 后可能变成 root 拥有
+  - 启动入口需要先修正 `/app/data` 与 `/app/logs` 的属主，再以 `app` 身份启动应用，避免 SQLite 报 `attempt to write a readonly database`
+  - 统计数据库路径支持通过环境变量 `STATS_DB_PATH` 覆盖，默认仍为 `data/stats.db`
+
 ### Git 与回复偏好
 - Date: 2026-04-25
 - Context: 用户在说明后续协作与提交规范时明确指出
@@ -93,7 +102,9 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - commit message 使用专业格式：`改动类型(改动文件): 改动内容`
   - 提交前需一次性阅读所有改动，并按改动分类拆分为多次 commit
   - 提交说明需使用单行 `git commit` 命令，通过多个 `-m` 参数拼接内容
+  - Git 提交相关信息应尽量在中文环境下展示
+  - 提交信息里的贡献者 name 使用 `W1ndys`，邮箱使用 `w1ndys@qq.com`
   - 异常处理需尽量完善，并将报错信息显式反馈给用户
   - 聊天回复中的链接不得使用代码块包裹，必须使用纯文本或 Markdown 链接
-  - 对于开发任务，开始修改前优先创建分支；若远程与权限可用，则尽早推送分支并发起 PR，后续每完成一个阶段及时推送
+  - 对于开发任务，开始修改代码前就要创建并推送新分支，并尽早发起 PR；后续每完成一个步骤都应及时推送
   - 若用户要求提交，优先使用中文环境展示 Git 信息
